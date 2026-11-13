@@ -28,17 +28,17 @@ A jel egy 6 × 4 pontos mátrix, 14 egység rácstávval, `viewBox="0 0 81 53"`.
 | B betű | 8 tömör pötty | `mark-b` |
 | kitöltők | 4 tömör pötty a B belsejében és jobb felső sarkában | `mark-filler` |
 | L gyűrűje | 1 üres gyűrű (r = 3, vonal 2) az L végén | `mark-l` |
-| B gyűrűi | 2 üres gyűrű a B két végén | `mark-ring` |
+| B gyűrűi | 2 üres gyűrű a B két végén | `mark-ring` (narancs) |
 
 Tömör pötty sugara 4, a gyűrűé 3 (a vonal 2 vastag, így a külső mérete is 4). A pöttyök nincsenek összekötve.
 
 ### A jel, palakék alapon
 
 ```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 81 53" width="162" height="106"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)"><circle fill="#000000" cx="47.5" cy="5.5" r="4"/><circle fill="#000000" cx="33.5" cy="19.5" r="4"/><circle fill="#000000" cx="47.5" cy="33.5" r="4"/><circle fill="#000000" cx="33.5" cy="47.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="5.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="19.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="33.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="47.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="61.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="19.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="33.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="47.5" cy="75.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="5.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="19.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="33.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="47.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="61.5" r="4"/><circle fill="#ee8643" cx="33.5" cy="5.5" r="4"/><circle fill="#ee8643" cx="33.5" cy="33.5" r="4"/><circle fill="#ee8643" cx="47.5" cy="19.5" r="4"/><circle stroke="#eaecf0" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle stroke="#eaecf0" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle stroke="#eaecf0" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/></g></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 81 53" width="162" height="106"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)"><circle fill="#000000" cx="47.5" cy="5.5" r="4"/><circle fill="#000000" cx="33.5" cy="19.5" r="4"/><circle fill="#000000" cx="47.5" cy="33.5" r="4"/><circle fill="#000000" cx="33.5" cy="47.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="5.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="19.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="33.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="47.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="61.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="19.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="33.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="47.5" cy="75.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="5.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="19.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="33.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="47.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="61.5" r="4"/><circle fill="#ee8643" cx="33.5" cy="5.5" r="4"/><circle fill="#ee8643" cx="33.5" cy="33.5" r="4"/><circle fill="#ee8643" cx="47.5" cy="19.5" r="4"/><circle stroke="#eaecf0" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle stroke="#ee8643" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle stroke="#ee8643" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/></g></g></svg>
 ```
 
-Világos alapon használd a világos téma tokenjeit (`mark-l` fekete, `mark-filler` és `mark-ring` palakék). A `Logo` komponens mindhárom felületet megmutatja.
+Világos alapon használd a világos téma tokenjeit (`mark-l` fekete, `mark-filler` palakék; a B gyűrűi itt is narancsok). A `Logo` komponens mindhárom felületet megmutatja.
 
 ### Lockup és szabályok
 

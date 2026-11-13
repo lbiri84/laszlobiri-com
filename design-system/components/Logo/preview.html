@@ -20,9 +20,9 @@ function mark(w,t){
   return '<svg viewBox="0 0 81 53" width="'+w+'" height="'+(w*53/81)+'" role="img" aria-label="laszlobiri jel"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)">'+s+'</g></g></svg>';
 }
 var T=[
- {n:'Palakék alap',bg:'#293c4b',w1:'#eaecf0',w2:'#ee8643',t:{f:'#000000',l:'#eaecf0',b:'#ee8643',lr:'#eaecf0',br:'#eaecf0'}},
- {n:'Fekete alap',bg:'#000000',w1:'#eaecf0',w2:'#ee8643',t:{f:'#293c4b',l:'#eaecf0',b:'#ee8643',lr:'#ee8643',br:'#ee8643'}},
- {n:'Világos alap',bg:'#eaecf0',w1:'#000000',w2:'#ee8643',t:{f:'#293c4b',l:'#000000',b:'#ee8643',lr:'#000000',br:'#293c4b'}}
+ {n:'Palakék alap',bg:'#293c4b',w1:'#eaecf0',w2:'#ee8643',t:{f:'#000000',l:'#eaecf0',b:'#ee8643',lr:'#eaecf0',br:'#ee8643'}},
+ {n:'Fekete alap',bg:'#000000',w1:'#eaecf0',w2:'#ee8643',t:{f:'#293c4b',l:'#eaecf0',b:'#ee8643',lr:'#eaecf0',br:'#ee8643'}},
+ {n:'Világos alap',bg:'#eaecf0',w1:'#000000',w2:'#ee8643',t:{f:'#293c4b',l:'#000000',b:'#ee8643',lr:'#000000',br:'#ee8643'}}
 ];
 document.getElementById('row').innerHTML=T.map(function(x){
   return '<div><div class="tile" style="background:'+x.bg+'">'+mark(190,x.t)+'<div class="name" style="color:'+x.w1+'">laszlo<span style="color:'+x.w2+'">biri</span></div></div><div class="cap">'+x.n+'</div></div>';
