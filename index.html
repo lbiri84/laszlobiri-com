@@ -6,96 +6,83 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Biri László saját alkalmazásai egy helyen.">
 <title>Biri László alkalmazásai</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d6b52'/%3E%3Cpath d='M9 8v16h5M14 16h9M14 24h9' stroke='%23f4f6f1' stroke-width='2.6' fill='none' stroke-linecap='square'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23ff6b5e'/%3E%3Cpath d='M10 7v18h6.5a5 5 0 0 0 0-9.5H10' stroke='%231b0f1a' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
-  /* Layout idea: a ledger. Big name on top, each app is a numbered entry row-card with a mono "account line" (address, status). */
+  /* Elrendezés: az ebed.laszlobiri.com oldal megjelenése: színátmenetes háttér, áttetsző sötét panelek,
+     széles betűközű Bebas Neue cím, korall kiemelés. Szándékosan egyetlen, sötét megjelenés. */
   :root {
-    --bg: #e9ece6;
-    --card: #f4f6f1;
-    --ink: #121a16;
-    --muted: #55625b;
-    --line: #c5ccc3;
-    --accent: #0d6b52;
-    --accent-ink: #f4f6f1;
-    --display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f1512;
-      --card: #151d19;
-      --ink: #e6ebe5;
-      --muted: #8c9a92;
-      --line: #26332c;
-      --accent: #5fd1a4;
-      --accent-ink: #0b130f;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0f1512;
-    --card: #151d19;
-    --ink: #e6ebe5;
-    --muted: #8c9a92;
-    --line: #26332c;
-    --accent: #5fd1a4;
-    --accent-ink: #0b130f;
+    --ink: #f7f2f5;
+    --ink-dim: #cdc3d4;
+    --panel: rgba(16, 11, 26, 0.7);
+    --line: rgba(255, 255, 255, 0.14);
+    --lavender: #9a9eff;
+    --coral: #ff6b5e;
+    --coral-ink: #1b0f1a;
+    --display: "Bebas Neue", "Oswald", Impact, "Arial Narrow", sans-serif;
+    --body: "Montserrat", -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+    --radius: 4px;
     color-scheme: dark;
   }
 
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
+  html { background: #223f93; }
   body {
-    margin: 0;
+    margin: 0 auto;
+    padding: 36px 24px 48px;
+    max-width: 1180px;
     min-height: 100vh;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--display);
-    font-size: 1.0625rem;
-    line-height: 1.5;
     display: flex;
     flex-direction: column;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 45% at 80% 4%, rgba(255, 118, 125, 0.95), transparent 70%),
+      radial-gradient(45% 42% at 18% 22%, rgba(250, 150, 108, 0.8), transparent 70%),
+      radial-gradient(55% 55% at 6% 86%, rgba(28, 72, 176, 0.95), transparent 72%),
+      radial-gradient(50% 50% at 96% 88%, rgba(44, 66, 170, 0.9), transparent 72%),
+      linear-gradient(165deg, #e5607b 0%, #a3548e 42%, #23409a 100%);
+  }
 
-  header { padding-top: clamp(40px, 9vw, 96px); padding-bottom: clamp(32px, 6vw, 64px); }
+  header.page { margin: clamp(8px, 4vw, 40px) 0 32px; }
   h1 {
-    margin: 0;
-    font-size: clamp(3.25rem, 13vw, 9rem);
-    line-height: .9;
-    font-weight: 800;
-    letter-spacing: -.045em;
-    font-variation-settings: "opsz" 96;
-    text-wrap: balance;
-  }
-  h1 span { color: var(--accent); }
-  .lead {
-    margin: clamp(20px, 3vw, 32px) 0 0;
-    max-width: 34ch;
-    color: var(--muted);
-    font-size: clamp(1.1rem, 2.4vw, 1.35rem);
-    text-wrap: balance;
-  }
-
-  .bar {
-    display: flex; justify-content: space-between; gap: 16px;
-    padding: 12px 0;
-    border-top: 2px solid var(--ink);
-    font-family: var(--mono);
-    font-size: .8125rem;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(44px, 10vw, 96px);
+    line-height: 1;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--muted);
+    margin: 0 0 14px;
   }
-  .bar b { color: var(--ink); font-weight: 500; }
+  h1 .h1-a { color: var(--lavender); }
+  h1 .h1-b { color: #fff; }
+  .sub {
+    color: var(--ink);
+    font-size: 12.5px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    margin: 0;
+    max-width: 62ch;
+    display: inline-block;
+    padding: 10px 14px;
+    background: rgba(16, 11, 26, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+  }
 
-  main { flex: 1; padding-bottom: clamp(40px, 8vw, 88px); }
+  main { flex: 1; }
   .grid {
-    list-style: none; margin: 16px 0 0; padding: 0;
+    list-style: none; margin: 0; padding: 0;
     display: grid; gap: 16px;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   }
@@ -103,94 +90,106 @@
 
   .app {
     flex: 1;
-    display: flex; flex-direction: column; gap: 14px;
-    min-height: 260px;
-    padding: 20px 20px 18px;
-    background: var(--card);
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 240px;
+    padding: 18px 20px;
+    background: var(--panel);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    color: inherit;
+    border-radius: var(--radius);
+    color: var(--ink);
     text-decoration: none;
     transition: background-color .18s, color .18s, border-color .18s, transform .18s;
-    animation: rise .5s cubic-bezier(.2,.7,.2,1) backwards;
-    animation-delay: calc(var(--i, 0) * 70ms + 80ms);
   }
-  .app:hover, .app:focus-visible {
-    background: var(--accent);
-    color: var(--accent-ink);
-    border-color: var(--accent);
+  a.app:hover, a.app:focus-visible {
+    background: var(--coral);
+    border-color: var(--coral);
+    color: var(--coral-ink);
     transform: translateY(-3px);
   }
-  .app:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
-  .app:hover .meta, .app:focus-visible .meta,
-  .app:hover p, .app:focus-visible p { color: inherit; }
+  a.app:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
-  .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; }
   .no {
-    font-family: var(--mono);
-    font-size: 2.75rem; line-height: 1; font-weight: 400;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -.04em;
-    color: var(--accent);
+    font-family: var(--display);
+    font-size: 48px; line-height: .9; letter-spacing: 0.08em;
+    color: var(--lavender);
     transition: color .18s;
   }
-  .app:hover .no, .app:focus-visible .no { color: inherit; }
+  a.app:hover .no, a.app:focus-visible .no { color: var(--coral-ink); }
   .pill {
-    font-family: var(--mono); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
-    padding: 3px 9px; border: 1px solid currentColor; border-radius: 99px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 4px 10px; border: 1px solid currentColor; border-radius: 99px;
     display: inline-flex; align-items: center; gap: 7px;
+    color: #5fe08c;
+    transition: color .18s;
   }
-  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  a.app:hover .pill, a.app:focus-visible .pill { color: var(--coral-ink); }
 
-  h2 { margin: auto 0 0; font-size: 1.75rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 600; }
-  .app p { margin: 0; color: var(--muted); font-size: .98rem; max-width: 36ch; transition: color .18s; }
+  h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 26px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: auto 0 0;
+    line-height: 1.1;
+  }
+  .app p {
+    margin: 0; max-width: 36ch;
+    font-size: 12.5px; line-height: 1.7; letter-spacing: 0.02em;
+    color: var(--ink-dim);
+    transition: color .18s;
+  }
+  a.app:hover p, a.app:focus-visible p { color: var(--coral-ink); }
   .meta {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding-top: 12px; margin-top: 2px;
-    border-top: 1px solid currentColor;
-    font-family: var(--mono); font-size: .8125rem; color: var(--muted);
-    transition: color .18s;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-dim);
+    transition: color .18s, border-color .18s;
   }
-  .meta .arrow { font-size: 1.25rem; line-height: 1; transition: transform .18s; }
-  .app:hover .arrow, .app:focus-visible .arrow { transform: translateX(5px); }
+  a.app:hover .meta, a.app:focus-visible .meta { color: var(--coral-ink); border-color: rgba(27, 15, 26, .3); }
+  .meta .arrow { font-size: 18px; line-height: 1; letter-spacing: 0; transition: transform .18s; }
+  a.app:hover .arrow, a.app:focus-visible .arrow { transform: translateX(5px); }
 
-  .app.empty {
-    background: transparent; border-style: dashed; cursor: default;
-    justify-content: flex-end;
+  .app.empty { background: rgba(16, 11, 26, 0.3); border-style: dashed; justify-content: flex-end; }
+  .app.empty .no { color: rgba(255, 255, 255, 0.3); }
+  .app.empty h2 { color: var(--ink-dim); }
+
+  footer {
+    margin-top: 40px;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    font-size: 11px; letter-spacing: 0.08em; color: #fff;
+    text-shadow: 0 1px 6px rgba(20, 10, 40, 0.55);
+    opacity: 0.92;
   }
-  .app.empty:hover { background: transparent; color: inherit; border-color: var(--line); transform: none; }
-  .app.empty .no { color: var(--line); }
-  .app.empty h2 { color: var(--muted); font-weight: 400; }
 
-  footer { border-top: 1px solid var(--line); padding: 18px 0 28px; font-family: var(--mono); font-size: .8125rem; color: var(--muted); }
-  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-
-  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  @media (max-width: 640px) { body { padding-left: 16px; padding-right: 16px; } }
   @media (prefers-reduced-motion: reduce) {
-    .app { animation: none; transition: none; }
-    .app:hover, .app:focus-visible { transform: none; }
+    * { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
 <body>
 
-<header class="wrap">
-  <h1>Biri<br><span>László</span></h1>
-  <p class="lead">Saját alkalmazásaim egy helyen. Válassz egyet, és megnyílik.</p>
+<header class="page">
+  <h1><span class="h1-a">Biri</span> <span class="h1-b">László</span></h1>
+  <p class="sub">Saját alkalmazásaim egy helyen. Válassz egyet, és megnyílik.</p>
 </header>
 
-<main class="wrap">
-  <div class="bar"><b>Alkalmazások</b><span>1 élő</span></div>
-
+<main>
   <!--
     ÚJ ALKALMAZÁS HOZZÁADÁSA:
     másold le az egyik <li> blokkot, írd át a számot, a címet, a leírást és a linket (href + a meta sor).
     Az "empty" kártyát töröld vagy írd át, ha már nincs rá szükség.
-    Az --i érték a betöltési animáció sorrendjét adja.
   -->
   <ul class="grid">
     <li>
-      <a class="app" href="https://ebed.laszlobiri.com" style="--i:0">
+      <a class="app" href="https://ebed.laszlobiri.com">
         <div class="top"><span class="no">01</span><span class="pill">élő</span></div>
         <h2>Interfood rendelés</h2>
         <p>Heti ebédválasztó az Interfood-menüből. Rendelési határidő: péntek 9:00.</p>
@@ -198,7 +197,7 @@
       </a>
     </li>
     <li>
-      <div class="app empty" style="--i:1">
+      <div class="app empty">
         <div class="top"><span class="no">02</span></div>
         <h2>Következő alkalmazás</h2>
         <div class="meta"><span>hamarosan</span></div>
@@ -207,9 +206,7 @@
   </ul>
 </main>
 
-<footer>
-  <div class="wrap"><span>laszlobiri.com</span><span>© 2026 Biri László</span></div>
-</footer>
+<footer><span>laszlobiri.com</span><span>© 2026 Biri László</span></footer>
 
 </body>
 </html>
