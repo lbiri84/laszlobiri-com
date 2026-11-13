@@ -5,170 +5,114 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Biri László saját alkalmazásai egy helyen.">
+<meta name="theme-color" content="#293c4b">
 <title>Biri László alkalmazásai</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23ff6b5e'/%3E%3Cpath d='M10 7v18h6.5a5 5 0 0 0 0-9.5H10' stroke='%231b0f1a' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="design-system/tokens.css">
 <style>
-  /* Elrendezés: az ebed.laszlobiri.com oldal megjelenése: színátmenetes háttér, áttetsző sötét panelek,
-     széles betűközű Bebas Neue cím, korall kiemelés. Szándékosan egyetlen, sötét megjelenés. */
-  :root {
-    --ink: #f7f2f5;
-    --ink-dim: #cdc3d4;
-    --panel: rgba(16, 11, 26, 0.7);
-    --line: rgba(255, 255, 255, 0.14);
-    --lavender: #9a9eff;
-    --coral: #ff6b5e;
-    --coral-ink: #1b0f1a;
-    --display: "Bebas Neue", "Oswald", Impact, "Arial Narrow", sans-serif;
-    --body: "Montserrat", -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
-    --radius: 4px;
-    color-scheme: dark;
-  }
-
+  /* A laszlobiri design system alapján (design-system/README.md). Szándékosan egyetlen, sötét (palakék) megjelenés. */
+  :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  html { background: #223f93; }
+  html { background: var(--bg); }
   body {
     margin: 0 auto;
-    padding: 36px 24px 48px;
+    padding: var(--space-8) var(--space-6) var(--space-12);
     max-width: 1180px;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: transparent;
-    color: var(--ink);
-    font-family: var(--body);
-    font-size: 14px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 24px;
     -webkit-font-smoothing: antialiased;
   }
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(60% 45% at 80% 4%, rgba(255, 118, 125, 0.95), transparent 70%),
-      radial-gradient(45% 42% at 18% 22%, rgba(250, 150, 108, 0.8), transparent 70%),
-      radial-gradient(55% 55% at 6% 86%, rgba(28, 72, 176, 0.95), transparent 72%),
-      radial-gradient(50% 50% at 96% 88%, rgba(44, 66, 170, 0.9), transparent 72%),
-      linear-gradient(165deg, #e5607b 0%, #a3548e 42%, #23409a 100%);
-  }
+  .mk .f{fill:var(--mark-filler)}.mk .l{fill:var(--mark-l)}.mk .b{fill:var(--mark-b)}.mk .lr{stroke:var(--mark-l)}.mk .br{stroke:var(--mark-ring)}
+  .mk circle[stroke-width] { fill: none; }
 
-  header.page { margin: clamp(8px, 4vw, 40px) 0 32px; }
+  header.page { margin: clamp(8px, 4vw, 40px) 0 var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); align-items: flex-start; }
+  .mk { width: clamp(120px, 20vw, 190px); height: auto; display: block; }
   h1 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(44px, 10vw, 96px);
+    font-size: clamp(44px, 10vw, 84px);
     line-height: 1;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin: 0 0 14px;
-  }
-  h1 .h1-a { color: var(--lavender); }
-  h1 .h1-b { color: #fff; }
-  .sub {
-    color: var(--ink);
-    font-size: 12.5px;
-    line-height: 1.7;
-    letter-spacing: 0.02em;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     margin: 0;
-    max-width: 62ch;
-    display: inline-block;
-    padding: 10px 14px;
-    background: rgba(16, 11, 26, 0.6);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius);
   }
+  h1 .biri { color: var(--accent); }
+  .sub { color: var(--fg-muted); margin: 0; max-width: 62ch; }
 
   main { flex: 1; }
   .grid {
     list-style: none; margin: 0; padding: 0;
-    display: grid; gap: 16px;
+    display: grid; gap: var(--space-4);
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   }
   .grid li { display: flex; }
 
   .app {
     flex: 1;
-    display: flex; flex-direction: column; gap: 12px;
+    display: flex; flex-direction: column; gap: var(--space-3);
     min-height: 240px;
-    padding: 18px 20px;
-    background: var(--panel);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    padding: var(--space-6);
+    background: var(--bg-raised);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
-    color: var(--ink);
+    border-radius: var(--radius-lg);
+    color: var(--fg);
     text-decoration: none;
     transition: background-color .18s, color .18s, border-color .18s, transform .18s;
   }
   a.app:hover, a.app:focus-visible {
-    background: var(--coral);
-    border-color: var(--coral);
-    color: var(--coral-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--brand-black);
     transform: translateY(-3px);
   }
-  a.app:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  a.app:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
 
   .top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .no {
-    font-family: var(--display);
-    font-size: 48px; line-height: .9; letter-spacing: 0.08em;
-    color: var(--lavender);
-    transition: color .18s;
-  }
-  a.app:hover .no, a.app:focus-visible .no { color: var(--coral-ink); }
+  .no { font-size: 44px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; color: var(--accent-text); transition: color .18s; }
+  a.app:hover .no, a.app:focus-visible .no { color: var(--brand-black); }
   .pill {
-    font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
-    padding: 4px 10px; border: 1px solid currentColor; border-radius: 99px;
-    display: inline-flex; align-items: center; gap: 7px;
-    color: #5fe08c;
+    font-size: 14px; line-height: 20px; font-weight: 500;
+    padding: 2px var(--space-3); border: 1px solid currentColor; border-radius: var(--radius-full);
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    color: var(--accent-text);
     transition: color .18s;
   }
-  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  a.app:hover .pill, a.app:focus-visible .pill { color: var(--coral-ink); }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  a.app:hover .pill, a.app:focus-visible .pill { color: var(--brand-black); }
 
-  h2 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: 26px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    margin: auto 0 0;
-    line-height: 1.1;
-  }
-  .app p {
-    margin: 0; max-width: 36ch;
-    font-size: 12.5px; line-height: 1.7; letter-spacing: 0.02em;
-    color: var(--ink-dim);
-    transition: color .18s;
-  }
-  a.app:hover p, a.app:focus-visible p { color: var(--coral-ink); }
+  h2 { font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.01em; margin: auto 0 0; }
+  .app p { margin: 0; max-width: 36ch; font-size: 15px; line-height: 22px; color: var(--fg-muted); transition: color .18s; }
+  a.app:hover p, a.app:focus-visible p { color: var(--brand-black); }
   .meta {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding-top: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+    padding-top: var(--space-3);
     border-top: 1px solid var(--line);
-    font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--ink-dim);
+    font-size: 14px; line-height: 20px; font-weight: 500;
+    color: var(--fg-muted);
     transition: color .18s, border-color .18s;
   }
-  a.app:hover .meta, a.app:focus-visible .meta { color: var(--coral-ink); border-color: rgba(27, 15, 26, .3); }
-  .meta .arrow { font-size: 18px; line-height: 1; letter-spacing: 0; transition: transform .18s; }
+  a.app:hover .meta, a.app:focus-visible .meta { color: var(--brand-black); border-color: rgba(0, 0, 0, .3); }
+  .meta .arrow { font-size: 20px; line-height: 1; transition: transform .18s; }
   a.app:hover .arrow, a.app:focus-visible .arrow { transform: translateX(5px); }
 
-  .app.empty { background: rgba(16, 11, 26, 0.3); border-style: dashed; justify-content: flex-end; }
-  .app.empty .no { color: rgba(255, 255, 255, 0.3); }
-  .app.empty h2 { color: var(--ink-dim); }
+  .app.empty { background: transparent; border-style: dashed; justify-content: flex-end; }
+  .app.empty .no { color: var(--fg-muted); }
+  .app.empty h2 { color: var(--fg-muted); }
 
   footer {
-    margin-top: 40px;
-    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    font-size: 11px; letter-spacing: 0.08em; color: #fff;
-    text-shadow: 0 1px 6px rgba(20, 10, 40, 0.55);
-    opacity: 0.92;
+    margin-top: var(--space-12);
+    display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+    font-size: 14px; line-height: 20px; color: var(--fg-muted);
   }
 
-  @media (max-width: 640px) { body { padding-left: 16px; padding-right: 16px; } }
+  @media (max-width: 640px) { body { padding-left: var(--space-4); padding-right: var(--space-4); } }
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
@@ -177,7 +121,8 @@
 <body>
 
 <header class="page">
-  <h1><span class="h1-a">Biri</span> <span class="h1-b">László</span></h1>
+  <svg class="mk" viewBox="0 0 81 53" role="img" aria-label="laszlobiri jel"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)"><circle class="f" cx="47.5" cy="5.5" r="4"/><circle class="f" cx="33.5" cy="19.5" r="4"/><circle class="f" cx="47.5" cy="33.5" r="4"/><circle class="f" cx="33.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="5.5" r="4"/><circle class="l" cx="5.5" cy="19.5" r="4"/><circle class="l" cx="5.5" cy="33.5" r="4"/><circle class="l" cx="5.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="61.5" r="4"/><circle class="l" cx="5.5" cy="75.5" r="4"/><circle class="l" cx="19.5" cy="75.5" r="4"/><circle class="l" cx="33.5" cy="75.5" r="4"/><circle class="l" cx="47.5" cy="75.5" r="4"/><circle class="b" cx="19.5" cy="5.5" r="4"/><circle class="b" cx="19.5" cy="19.5" r="4"/><circle class="b" cx="19.5" cy="33.5" r="4"/><circle class="b" cx="19.5" cy="47.5" r="4"/><circle class="b" cx="19.5" cy="61.5" r="4"/><circle class="b" cx="33.5" cy="5.5" r="4"/><circle class="b" cx="33.5" cy="33.5" r="4"/><circle class="b" cx="47.5" cy="19.5" r="4"/><circle class="lr" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/></g></g></svg>
+  <h1>laszlo<span class="biri">biri</span></h1>
   <p class="sub">Saját alkalmazásaim egy helyen. Válassz egyet, és megnyílik.</p>
 </header>
 
