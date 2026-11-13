@@ -1,0 +1,31 @@
+<!-- @dsCard group="Márka" height=560 subtitle="jel és lockup három felületen" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
+<style>
+html,body{margin:0}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--fg);padding:var(--space-6)}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
+.tile{border-radius:var(--radius-lg);height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-6)}
+.name{font-size:var(--wm,48px);font-weight:600;letter-spacing:-.03em;line-height:1}
+.cap{margin-top:var(--space-2);font-size:14px;color:var(--fg-muted)}
+.small{display:flex;gap:var(--space-8);align-items:flex-end;margin-top:var(--space-6)}
+</style></head><body>
+<div class="row" id="row"></div>
+<div class="small" id="small"></div>
+<script>
+var C='<circle class="f" cx="47.5" cy="5.5" r="4"/><circle class="f" cx="33.5" cy="19.5" r="4"/><circle class="f" cx="47.5" cy="33.5" r="4"/><circle class="f" cx="33.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="5.5" r="4"/><circle class="l" cx="5.5" cy="19.5" r="4"/><circle class="l" cx="5.5" cy="33.5" r="4"/><circle class="l" cx="5.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="61.5" r="4"/><circle class="l" cx="5.5" cy="75.5" r="4"/><circle class="l" cx="19.5" cy="75.5" r="4"/><circle class="l" cx="33.5" cy="75.5" r="4"/><circle class="l" cx="47.5" cy="75.5" r="4"/><circle class="b" cx="19.5" cy="5.5" r="4"/><circle class="b" cx="19.5" cy="19.5" r="4"/><circle class="b" cx="19.5" cy="33.5" r="4"/><circle class="b" cx="19.5" cy="47.5" r="4"/><circle class="b" cx="19.5" cy="61.5" r="4"/><circle class="b" cx="33.5" cy="5.5" r="4"/><circle class="b" cx="33.5" cy="33.5" r="4"/><circle class="b" cx="47.5" cy="19.5" r="4"/><circle class="lr" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/>';
+function mark(w,t){
+  var s=C.replace(/class="f"/g,'fill="'+t.f+'"').replace(/class="l"/g,'fill="'+t.l+'"').replace(/class="b"/g,'fill="'+t.b+'"').replace(/class="lr"/g,'stroke="'+t.lr+'"').replace(/class="br"/g,'stroke="'+t.br+'"');
+  return '<svg viewBox="0 0 81 53" width="'+w+'" height="'+(w*53/81)+'" role="img" aria-label="laszlobiri jel"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)">'+s+'</g></g></svg>';
+}
+var T=[
+ {n:'Palakék alap',bg:'#293c4b',w1:'#eaecf0',w2:'#ee8643',t:{f:'#000000',l:'#eaecf0',b:'#ee8643',lr:'#eaecf0',br:'#eaecf0'}},
+ {n:'Fekete alap',bg:'#000000',w1:'#eaecf0',w2:'#ee8643',t:{f:'#293c4b',l:'#eaecf0',b:'#ee8643',lr:'#ee8643',br:'#ee8643'}},
+ {n:'Világos alap',bg:'#eaecf0',w1:'#000000',w2:'#ee8643',t:{f:'#293c4b',l:'#000000',b:'#ee8643',lr:'#000000',br:'#293c4b'}}
+];
+document.getElementById('row').innerHTML=T.map(function(x){
+  return '<div><div class="tile" style="background:'+x.bg+'">'+mark(190,x.t)+'<div class="name" style="color:'+x.w1+'">laszlo<span style="color:'+x.w2+'">biri</span></div></div><div class="cap">'+x.n+'</div></div>';
+}).join('');
+document.getElementById('small').innerHTML=[96,48,24].map(function(w){return '<div>'+mark(w,T[0].t).replace('<svg','<svg style="background:#293c4b;padding:8px;border-radius:12px"')+'<div class="cap">'+w+' px</div></div>';}).join('');
+</script></body></html>
