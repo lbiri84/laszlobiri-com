@@ -34,6 +34,8 @@ const TABLES = ['profiles', 'households', 'household_members'];
 let failed = 0;
 const pass = msg => console.log('  rendben  ' + msg);
 const fail = msg => { failed++; console.log('  HIBA     ' + msg); };
+let warned = 0;
+const warn = msg => { warned++; console.log('  FIGYELEM ' + msg); };
 
 // Csak a jogosultsági elutasítás számít sikernek. Hálózati hiba vagy hiányzó
 // tábla NEM: az nem bizonyítja, hogy az RLS véd.
@@ -101,10 +103,17 @@ const probe = `rls-check-${Date.now()}@example.com`;
   if (!error && data?.user) fail('regisztráció ismeretlen címmel: létrejött egy felhasználó (' + probe + '), töröld a dashboardon');
   else if (!error) fail('regisztráció ismeretlen címmel: nem jött hiba, de felhasználó sem; ellenőrizd a dashboardon');
   else if (['email_provider_disabled', 'signup_disabled'].includes(error.code)) pass(`regisztráció e-maillel: az e-mail provider ki van kapcsolva (${tag})`);
-  else if (/nincs engedélyezve|hook/i.test(error.message)) pass(`regisztráció e-maillel: az allowlist elutasította (${tag})`);
+  else if (/nincs engedélyezve|hook/i.test(error.message)) {
+    pass(`regisztráció e-maillel: az allowlist hook elutasította (${tag})`);
+    warn('az e-mail provider be van kapcsolva; csak Google-belépés kell, kapcsold ki (Authentication → Providers → Email)');
+  } else if (/database error saving new user/i.test(error.message)) {
+    pass(`regisztráció e-maillel: az allowlist trigger elutasította (${tag})`);
+    warn('az e-mail provider be van kapcsolva; kapcsold ki (Authentication → Providers → Email)');
+    warn('a Before User Created hook nem utasított el, tehát nincs bekötve (Authentication → Hooks); most csak a trigger véd');
+  }
   else if (error.status === 0 || /fetch/i.test(error.message)) fail(`regisztráció: a projekt nem érhető el (${tag})`);
   else fail(`regisztráció: nem egyértelmű elutasítás, ellenőrizd az e-mail providert (${tag})`);
 }
 
-console.log(failed ? `\n${failed} ellenőrzés elbukott.` : '\nMinden ellenőrzés rendben.');
+console.log(failed ? `\n${failed} ellenőrzés elbukott.` : '\nMinden ellenőrzés rendben.' + (warned ? ` ${warned} figyelmeztetés (beállítás, nem adatszivárgás).` : ''));
 process.exit(failed ? 1 : 0);
