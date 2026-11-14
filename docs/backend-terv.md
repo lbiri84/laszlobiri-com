@@ -318,7 +318,7 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
   - `supabase/migrations/20261114120000_core.sql`, `supabase/config.toml`, `supabase/seed.sql`, `supabase/README.md` (élesítési lépések);
   - `supabase/tests/001_core_rls.test.sql`: 38 pgTAP teszt, helyben futtatva `npm run test:db` (sima Postgres 16 + pgTAP, Supabase-stubbal);
   - `lib/v1/`: `config.js` (még üres), `client.js`, `auth.js`, `auth-badge.js`, `supabase.js` (supabase-js 2.118.0 + ssr 0.12.7, esbuild);
-  - `belepes/`, `adatvedelem/` (a kapcsolati cím még kitöltendő), `_config.yml`;
+  - `belepes/`, `adatvedelem/`, `_config.yml`;
   - `scripts/rls-check.mjs` (anon kulccsal, éles projekten futtatandó), `scripts/login-smoke.mjs` (böngészős füstpróba ál-Supabase szerverrel, 16 ellenőrzés).
   - Eltérés a tervtől: az allowlist `text` oszlop `lower()`-rel, nem `citext` (üres `search_path` mellett a `citext` összehasonlítás kis- és nagybetű-érzékeny maradt). A trigger második rétegként akkor is elutasít, ha a hook nincs bekötve.
   - A Supabase-projekt elkészült (`eokwxkrcttsoxfflvuus`, a nyilvános adatok a `lib/v1/config.js`-ben). Valódi Supabase-en még nem futott: a migráció, a hook eseményformátuma (`is_anonymous`) és a `.laszlobiri.com` süti a projekt létrehozása után ellenőrizendő.
