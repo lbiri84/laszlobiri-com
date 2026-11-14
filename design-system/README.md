@@ -116,6 +116,8 @@ Szabályok:
 - **Belépés**: minden oldal a központi `https://laszlobiri.com/belepes/?next=…` oldalra küld (`signIn()`). A munkamenet `.laszlobiri.com` domainű sütiben él, így egy belépés mindenhol érvényes, és a kilépés is mindenhol kiléptet.
 - **Amíg a `config.js` üres**, az `<lb-auth>` nem jelenik meg, és az `isConfigured` hamis: az aloldalnak ilyenkor a mai, helyi módban kell működnie.
 - **Felhasználói szöveg** (másik felhasználó által beírt név, tétel) csak `textContent`-tel vagy `esc()`-pel kerülhet a DOM-ba.
+- **Offline mentés**: `lib/v1/outbox.js` (kimenő sor localStorage-ban, sorrendben küld, hálózati hibánál megtartja). Lásd a bevásárlólista és a gyakorló oldal használatát.
+- **Gyerek mód**: `lib/v1/device.js` (névtelen, párosított eszközfiók saját tárolóval, PIN). Csak a gyakorló oldal használja; ott a kapu a párosított tabletet is beengedi.
 - **PWA-nál** a service worker a `*.supabase.co` és a `laszlobiri.com/belepes/` kéréseket nem kezeli (a fetch kezelő `respondWith` nélkül visszatér), és a `lib/v1/*` nem kerül az `ASSETS` listába, ugyanazért, amiért a `tokens.css` sem.
 
 ## Fájlok ebben a repóban

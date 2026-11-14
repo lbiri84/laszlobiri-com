@@ -33,6 +33,8 @@ const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshTo
 const TABLES = {
   profiles: 'display_name', households: 'name', household_members: 'role',
   lists: 'name', items: 'name', item_history: 'name',
+  pupils: 'nickname', results: 'topic', pupil_badges: 'badge_id', devices: 'label',
+  device_pupils: null,   // nincs szöveges oszlopa: csak olvasás és beszúrás
 };
 
 let failed = 0;
@@ -89,9 +91,12 @@ console.log('Bejelentkezés nélkül, anon kulccsal: ' + url);
 for (const [t, col] of Object.entries(TABLES)) {
   await expectNoRows(`select ${t}`, sb.from(t).select('*').limit(5));
   await expectError(`insert ${t}`, sb.from(t).insert({}));
+  if (!col) continue;
   await expectNoRows(`update ${t}`, sb.from(t).update({ [col]: 'rls-check' }).not(col, 'is', null).select());
   await expectNoRows(`delete ${t}`, sb.from(t).delete().not(col, 'is', null).select());
 }
+await expectError('rpc create_pairing', sb.rpc('create_pairing', { p_pupils: ['00000000-0000-0000-0000-000000000000'], p_label: 'x' }));
+await expectError('rpc claim_pairing', sb.rpc('claim_pairing', { p_code: 'AAAA-AAAA' }));
 await expectError('rpc bump_history', sb.rpc('bump_history', {
   p_household: '00000000-0000-0000-0000-000000000000', p_name_key: 'x', p_name: 'x', p_cat: 'egyeb',
 }));
