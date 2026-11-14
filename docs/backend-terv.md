@@ -24,7 +24,7 @@ Mindhárom aloldal egyetlen `index.html`, build nélkül, inline `<script>`-tel.
 | DNS és Proton Mail rekordok nem változnak, nincs nameserver-váltás | Nincs Supabase custom domain (ahhoz CNAME kellene). Az auth a `<ref>.supabase.co` címen fut. A Google domain-ellenőrzés (ha kell) HTML-fájllal történik a GitHub Pages-en, nem DNS TXT rekorddal. A meglévő `bevasarlas`, `gyakorlas`, `ebed` CNAME-ek maradnak. |
 | `tokens.css` útvonala és a változónevek érintetlenek | A közös kód külön mappába kerül (`lib/v1/`), a `design-system/` mappához nem nyúlunk. |
 | csak a publikus kulcs és a projekt URL kerül kliensbe | A konfiguráció egyetlen fájlban (`lib/v1/config.js`) van. A service role / secret kulcs egyik repóban, Actions secretben vagy kliensben sem szerepel. |
-| gyerekekről csak becenév és eredmény | `pupils`: becenév és ikonkód. `results` és `pupil_badges`: számok, téma- és jelvénykódok, szabad szöveg nélkül. A gyerek nem jelentkezik be. |
+| gyerekekről csak becenév és eredmény | `pupils`: becenév és ikonkód. `results` és `pupil_badges`: számok, téma- és jelvénykódok, szabad szöveg nélkül. A gyereknek nincs fiókja: a saját tabletje egy névtelen, csak a gyakorlásra jogosult eszközfiókkal működik (gyerek mód). |
 | a bevásárlólista offline is működik | IndexedDB-ben a lista helyi példánya és egy kimenő sor (outbox). Visszatérő hálózatnál a sor kiürül, utána delta-lekérés és Realtime. A service worker a Supabase-kéréseket nem érinti. |
 
 ## 1. Adatmodell
@@ -112,12 +112,36 @@ Javaslat: **az eredmények csak hozzáfűzhető események**, a pontszámot, a s
 - `kind`: `round` | `hangman` | `wordsearch`
 - `topic` (check `^[a-z0-9]{1,32}$`, `round` esetén kötelező)
 - `score` (0–10), `best_streak` (0–10), `points` (az így szerzett pont), `answered`, `correct`
-- `created_at`, `recorded_by` (FK → profiles)
+- `created_at`, `recorded_by` (FK → `auth.users`, on delete set null): a szülő vagy a gyerek mód eszközfiókja
 - Döntés: a mai helyi pontok **nem kerülnek át**, a két gyerek nulláról indul. Ezért nincs import sor, és a `results` csak valódi körökből és minijátékokból áll.
 - Index: (`pupil_id`, `created_at desc`).
 - Döntés: **csak a befejezett kör számít**. Ma a félbehagyott kör jó válaszai is pontot érnek (válaszonként ment); az új modellben a pont, a megválaszolt és a jó válaszok száma a `finish()`-ben, egyszerre íródik. Ez a kijelentkezett, helyi üzemmódra is vonatkozik, hogy a két mód ugyanúgy számoljon.
 
 **`public.pupil_badges`**: `pupil_id`, `badge_id` (check: `^[a-z0-9-]{1,32}$`), `earned_at`; PK: (`pupil_id`, `badge_id`). Csak beszúrás, `on conflict do nothing`.
+
+### Gyerek mód: eszközfiók
+
+Döntés: a gyerekek saját eszközön (pl. tablet) is gyakorolnak, ezért **gyerek mód** kell. A gyerek mód nem a felület elrejtésén múlik, hanem a szerveren: a tablet nem a szülő Google-munkamenetével fut, hanem egy **névtelen Supabase-fiókkal** (anonymous sign-in), amelynek csak a hozzárendelt gyerekprofilokhoz van joga. Így ha a gyerek a tableten megnyitja a `bevasarlas.` címet, ott sincs hozzáférése semmihez.
+
+**`public.devices`**: egy sor egy párosított eszköz.
+- `user_id` (PK, FK → `auth.users`, cascade): a névtelen fiók
+- `household_id`, `label` (1–30, pl. „tablet”), `created_by` (a párosító szülő), `created_at`, `last_seen_at`
+- Személyes adat nincs benne. A névtelen fióknak nincs e-mail címe.
+
+**`public.device_pupils`**: `device_user_id`, `pupil_id`; PK mindkettő. Melyik gyerekprofil használható az eszközön (egy vagy mindkettő, ha közös a tablet).
+
+**`private.device_pairings`**: egyszer használható párosító kódok, a `private` sémában.
+- `code_hash` (PK; a kód maga nincs tárolva), `household_id`, `pupil_ids` (uuid[]), `label`, `created_by`, `expires_at` (10 perc), `used_at`.
+- A kód 8 karakter egy félreolvashatatlan ábécéből (pl. `K7MQ-3XPD`), kb. 40 bit. 10 perces lejárattal és a Supabase rate limittel végigpróbálni nem lehet.
+
+Függvények (`security definer`, `set search_path = ''`, `anon`-tól és `public`-tól visszavonva):
+- `public.create_pairing(pupil_ids uuid[], label text) → text`: csak `parent` hívhatja, csak a saját háztartása gyerekeire. Visszaadja a kódot.
+- `public.claim_pairing(code text) → void`: csak névtelen (`is_anonymous`), még párosítatlan fiók hívhatja. Ellenőrzi a lejáratot és az egyszeri használatot, létrehozza a `devices` és a `device_pupils` sorokat.
+- `private.is_device_for(pupil_id) → bool`: a hívó eszközfiókhoz tartozik-e az adott gyerekprofil.
+
+Takarítás (`pg_cron`, naponta):
+- a párosítatlan névtelen fiókok törlése 24 óra után (`auth.users`, ahol `is_anonymous` és nincs `devices` sor);
+- a lejárt párosító kódok törlése.
 
 ### Ebéd (Interfood)
 
@@ -143,9 +167,11 @@ A policykban `(select auth.uid())` formát használunk. A `security definer` fü
 | `lists` | `is_member` | nincs (trigger hozza létre) | `is_member`, csak `name` | nincs |
 | `items` | `is_member(list_household(list_id))` | ugyanaz, `created_by = auth.uid()` | ugyanaz using és with check ágon | soft delete updatettel |
 | `item_history` | `is_member` | `is_member` | `is_member` | `parent` |
-| `pupils` | `is_parent` | `is_parent` | `is_parent`, csak `nickname`, `avatar` | `is_parent` (kaszkád az eredményekre) |
-| `results` | `is_parent(pupil_household(pupil_id))` | ugyanaz, `recorded_by = auth.uid()` | nincs | `is_parent` |
-| `pupil_badges` | `is_parent(pupil_household(pupil_id))` | ugyanaz | nincs | `is_parent` |
+| `pupils` | `is_parent` vagy `is_device_for(id)` | `is_parent` | `is_parent`, csak `nickname`, `avatar` | `is_parent` (kaszkád az eredményekre) |
+| `results` | `is_parent(pupil_household(pupil_id))` vagy `is_device_for(pupil_id)` | ugyanaz, `recorded_by = auth.uid()` | nincs | `is_parent` |
+| `pupil_badges` | `is_parent(pupil_household(pupil_id))` vagy `is_device_for(pupil_id)` | ugyanaz | nincs | `is_parent` |
+| `devices` | `is_parent(household_id)`, vagy saját sor | nincs (`claim_pairing`) | saját sor: csak `last_seen_at` | `is_parent` (visszavonás, kaszkád a `device_pupils`-ra) |
+| `device_pupils` | `is_parent`, vagy saját eszköz sorai | nincs (`claim_pairing`) | nincs | `is_parent` |
 | `private.*` | nem érhető el (a séma nincs közzétéve, nincs `usage` jog) | | | |
 
 További szabályok:
@@ -163,6 +189,10 @@ További szabályok:
 - háztartáshoz nem tartozó, de allowlistes felhasználó semmit nem lát;
 - háztartásonként nem jöhet létre második lista;
 - senki nem írhatja a saját `app_role`-ját és a `household_members` táblát;
+- gyerek mód: az eszközfiók csak a hozzárendelt gyerekprofilt és annak eredményeit látja; nem lát listát, tételt, előzményt, más gyereket, más háztartást; nem írhat eredményt nem hozzárendelt gyereknek; nem hívhatja a `create_pairing`-et;
+- a párosítatlan névtelen fiók semmit nem lát;
+- a `claim_pairing` lejárt, már felhasznált vagy hibás kóddal hibát ad, és nem névtelen fiókkal sem hívható;
+- a visszavont eszköz (`devices` sor törölve) érvényes tokennel sem lát semmit;
 - `anon` szereppel minden tábla 0 sort vagy jogosultsági hibát ad.
 
 **b) Fekete dobozos teszt anon kulccsal** (`scripts/rls-check.mjs`, Node + `@supabase/supabase-js`, csak URL + anon kulcs):
@@ -183,11 +213,11 @@ Egyetlen visszahívási cím van a Supabase-ben és a Google-ben, és az aloldal
 
 ### Allowlist
 
-- **„Before User Created” auth hook** (`private.hook_before_user_created`): ha az e-mail nincs az `allowed_emails` táblában, a fiók létre sem jön.
+- **„Before User Created” auth hook** (`private.hook_before_user_created`): ha az e-mail nincs az `allowed_emails` táblában, a fiók létre sem jön. Kivétel a névtelen fiók (a gyerek mód miatt): az átengedhető, de semmihez nincs joga, amíg egy szülő által kiadott kóddal nem párosítják, és 24 óra után párosítás nélkül törlődik. (Az 1. fázisban ellenőrizni kell, hogy a hook eseménye tartalmazza-e az `is_anonymous` jelzőt.)
 - A `profiles` trigger az allowlist sora alapján beállítja az `app_role`-t és a `household_members` sort.
 - Második réteg: minden adat a háztartás-tagságon múlik.
 - Opcionális harmadik réteg: a Google consent screen „Testing” módban, felvett tesztfelhasználókkal.
-- Ki van kapcsolva: e-mail/jelszó, magic link, anonim belépés.
+- Ki van kapcsolva: e-mail/jelszó, magic link. A névtelen belépés be van kapcsolva, alacsony rate limittel (Authentication → Rate Limits, pl. óránként 10 IP-címenként).
 
 ### Közös munkamenet az aloldalak között
 
@@ -204,6 +234,17 @@ Ismert korlátok:
 - iOS-en a kezdőképernyőre tett PWA-nak (mindkét aloldalon van `apple-mobile-web-app-capable`) külön tárolója van, ott egyszer külön be kell lépni. Az OAuth-visszairányítást telepített PWA-ban a 0. fázisban ki kell próbálni.
 - Két aloldal egyszerre frissítheti a tokent. Ezt a refresh token reuse interval (alapból 10 s) kezeli.
 
+### Gyerek mód munkamenete
+
+- Az eszközfiók munkamenete **nem** a közös sütiben él, hanem csak a `gyakorlas.laszlobiri.com` saját `localStorage`-ában, külön kulcs alatt (`lib/v1/device.js`). A többi aldomain nem látja.
+- Párosítás, két út:
+  1. **A tableten**: a szülő a tableten belép Google-lel, a gyakorló oldalon „Ez az eszköz gyerek módba kerül” → kiválasztja a gyereket (vagy mindkettőt) és a PIN-t. Az oldal kódot kér (`create_pairing`), **kilépteti a szülőt** (a közös süti törlődik, így a tableten a bevásárlólista sem marad nyitva), névtelenül belép és beváltja a kódot.
+  2. **A szülő telefonjáról**: a szülői nézetben „Új eszköz” → kód 10 percig. A tableten „Gyerek mód” → kód beírása → PIN megadása.
+- A gyerek mód felülete: csak a hozzárendelt gyerekprofilok választója és a gyakorlás. Nincs belépés gomb, nincs link a többi oldalra, nincs szülői nézet. Ha két gyerek közös tabletet használ, a profilváltás PIN nélküli.
+- **Kilépés a gyerek módból**: „Szülő” gomb → 4 jegyű PIN → kijelentkezés és a helyi eszközadatok törlése. A PIN-t PBKDF2-vel (WebCrypto) hash-elve tároljuk az eszközön. A PIN csak kényelmi zár: ha a gyerek törli a böngésző adatait, azzal sem jut semmihez, csak a gyerek mód áll le.
+- **Visszavonás**: a szülői nézet „Eszközök” listájából (név, utoljára látott). A törlés után az eszköz tokenje érvényes marad, de az RLS miatt semmit nem lát, és a takarítás a névtelen fiókot is törli.
+- **Megmaradás**: iPaden a gyakorló oldalt a kezdőképernyőre telepítve kell használni. A böngészőfülben a Safari 7 nap használat nélkül törölheti a `localStorage`-ot, és akkor újra kell párosítani. A telepített app erre nem vonatkozik.
+
 Döntés: **közös süti**. Ha a 0. fázis kísérlete valamelyik böngészőben elbukik, a tartalék a domainenkénti `localStorage` és aloldalanként egy kattintásos belépés; erről akkor külön döntünk.
 
 ## 4. A közös kliens kód helye és bekötése
@@ -219,6 +260,7 @@ lib/
     client.js           egyetlen kliens példány, közös süti-beállításokkal
     auth.js             getUser(), signIn(next), signOut(), onAuthChange(cb)
     outbox.js           IndexedDB kimenő sor: enqueue(op), flush(handlers), a két aloldal közös mintája
+    device.js           gyerek mód: eszközfiók-kliens saját localStorage-dzsal, pair(code), unpair(), PIN-ellenőrzés
     auth-badge.js       <lb-auth> web component (belépés gomb / név + kilépés), csak tokenes CSS
   build/README.md       a supabase.js újragenerálása (esbuild, rögzített verziók)
 belepes/index.html      központi belépőoldal
@@ -306,7 +348,8 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
   - A mai `S` állapot gyerekenként a `results` és `pupil_badges` sorokból számolódik (`points` = a `points` összege, `rounds`, `perfect`, `best[topic]`, `played[topic]`, `days`/`lastDay` a dátumokból, `mgWins`/`wsWins` a `kind` alapján, `mgDone`/`mgN` a pontból). A `finish()` és a minijáték-győzelem egy-egy `results` sort ír; az új jelvény egy `pupil_badges` sort.
   - Az írás ugyanazzal a kimenő sorral történik (`lib/v1/outbox.js`), csak beszúrás, így offline gyakorlás is szinkronizálódik.
 - **Átállás**: nincs. A `gyakorlo.v1` helyi állapot érintetlen marad, és kijelentkezve továbbra is az látszik; belépve a gyerekprofilok nulláról indulnak. Belépéskor egy egyszeri, rövid tájékoztatás jelzi, hogy a régi pontok ezen az eszközön, kijelentkezve maradnak meg.
-- Szülői nézet: gyerekenként az utolsó körök, témánkénti legjobb és átlag, jelvények.
+- Szülői nézet: gyerekenként az utolsó körök, témánkénti legjobb és átlag, jelvények; „Eszközök” lista és „Új eszköz” párosítás.
+- **Gyerek mód** (a 3. fázis második fele): migráció (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing`, `claim_pairing`, takarítás), `lib/v1/device.js`, a gyerek mód felülete, PIN, visszavonás, tesztek. Kézi teszt egy iPaden telepített appként: párosítás, offline gyakorlás, visszakapcsolás, visszavonás, és hogy a tableten a `bevasarlas.` oldal üres.
 - `sw.js` módosítás (lásd fent). A README „Nincs fiók, semmit nem küld sehová” mondata frissül: belépés nélkül ez igaz marad, belépve a szülő fiókjába ment.
 
 ### 4. fázis: mentés, export, üzemeltetés
@@ -333,7 +376,7 @@ A belépés gomb és a heti kijelölés közös mentése (`meal_picks`), ha igé
 ### Supabase
 1. Új projekt, régió **Central EU (Frankfurt)**. Az adatbázis-jelszót a jelszókezelőbe.
 2. Project Settings → API: a **projekt URL** és a **publishable/anon kulcs** kell nekem (ezek publikusak). A service role / secret kulcsot ne küldd el, ne másold sehova.
-3. Authentication → Providers: Google bekapcsolása (Client ID + Secret). E-mail provider és anonim belépés ki.
+3. Authentication → Providers: Google bekapcsolása (Client ID + Secret). E-mail provider ki. **Anonymous sign-ins be** (a gyerek módhoz), és Authentication → Rate Limits alatt a névtelen belépés korlátja alacsonyra.
 4. Authentication → URL Configuration: Site URL `https://laszlobiri.com`; Redirect URLs: `https://laszlobiri.com/belepes/**`, fejlesztéshez `http://localhost:8000/**`.
 5. Authentication → Hooks: „Before User Created” → `private.hook_before_user_created` (a migráció után).
 6. A migrációk futtatása (Supabase CLI a gépedről, vagy SQL szerkesztő), utána a seed: háztartás, a te és a feleséged címe az allowlistbe (`parent`, te `admin`). Valódi e-mail cím nem kerül repóba.
@@ -363,7 +406,8 @@ A 2. és 3. fázishoz a `bevasarlo-lista` és a `gyakorlas` repót írási jogga
 | félbehagyott kör | nem számít, csak a befejezett kör |
 | mai helyi gyakorló pontok | nem kerülnek át, a gyerekek nulláról indulnak |
 | csomag | ingyenes Supabase + helyi, titkosított mentő szkript |
+| gyerekek saját eszköze | gyerek mód: névtelen, párosított eszközfiók, csak gyakorlásra jogosult, PIN-nel lehet kilépni belőle |
 
 ## Nyitott kérdések
 
-1. **Eszköz**: a gyerekek a ti telefonotokon gyakorolnak, vagy saját eszközön (pl. tablet)? Saját eszközön szülői belépés kell, és azon a bevásárlólista is elérhető lenne.
+Jelenleg nincs. A megvalósítás közben ellenőrizendő: a GitHub Pages CORS fejléce (4. szakasz), az iOS-re telepített PWA OAuth-visszairányítása (0. fázis), és hogy a Before User Created hook eseménye tartalmazza-e az `is_anonymous` jelzőt (1. fázis).
