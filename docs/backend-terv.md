@@ -58,7 +58,7 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 | `lists` | háztartásonként egy lista (trigger hozza létre) | tagok | név: tagok |
 | `items` | tétel (`name_key` egyedi az élő tételek között, soft delete) | tagok | tagok; `created_by`, `updated_*`, `list_id` a szerveré; valódi törlés nincs |
 | `item_history` | „gyakran vett” javaslatok | tagok | csak `bump_history()` |
-| `pupils` | becenév, ikon, `theme` (`slate` / `rose`) | szülő; a tablet a hozzá rendelteket | szülő; a tablet csak a hozzá rendelt gyerek `theme`-jét (`pupils_guard`) |
+| `pupils` | becenév, ikon, `theme` (`slate` / `rose` / `sky`) | szülő; a tablet a hozzá rendelteket | szülő; a tablet csak a hozzá rendelt gyerek `theme`-jét (`pupils_guard`) |
 | `results` | befejezett kör / minijáték (csak hozzáfűzés) | szülő; a tablet a hozzá rendelteket | szülő / tablet; `recorded_by` a szerveré; törölni csak a szülő |
 | `pupil_badges` | jelvények | mint `results` | mint `results` |
 | `devices`, `device_pupils` | párosított gyerek tabletek | szülő; a tablet a sajátját | `claim_pairing()`; törlés (visszavonás): szülő |
@@ -99,7 +99,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 - Szülő: „Ki gyakorol?” → gyerek; szülői nézet: gyerekprofilok, eredmények (utolsó 5 kör), gyerek tabletek (párosítás, visszavonás, „Ez az eszköz legyen a gyerek tablet”), jelentett feladatok.
 - A pont, a szint, a napi sorozat, a témánkénti legjobb és a jelvények az eredményekből számolódnak. Csak a befejezett kör és a megnyert minijáték mentődik.
 - Gyerek mód: a tablet csak a hozzá rendelt gyerekeket látja; kilépés „Szülő” → PIN.
-- Színtéma: a gyerek maga választja a kezdőképernyőn („Színem”); a rózsaszín a gyerek saját nézeteiben él, a „Ki gyakorol?” és a szülői nézet palakék.
+- Színtéma: a gyerek maga választja a kezdőképernyőn („Színem”): palakék, rózsaszín (sötét) vagy égkék (világos). A választott téma a gyerek saját nézeteiben él, a „Ki gyakorol?” és a szülői nézet palakék.
 - Hibás feladat: a kérdésnél „⚑” → okkód; a szülői nézetben „Javítva” / „Elvetés” és „Szövegként másolás” a javításhoz (a gyerek neve nélkül).
 
 ## Döntések
@@ -124,7 +124,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 
 - Commit **szerzője**: Laszlo Biri `<lbiri84@users.noreply.github.com>`; **committere**: Claude `<noreply@anthropic.com>`. A környezet a commitokat a Claude kulcsával SSH-val aláírja, és a GitHub ezt csak `noreply@anthropic.com` committerrel fogadja el („Verified”). Valódi e-mail cím nem kerül commitba. (2026-11-14 előtti commitoknál a committer is a noreply cím volt, ezért azok aláíratlannak látszanak; nem írjuk át őket.)
 - Munkaág: `claude/funny-turing-bphs2l` minden repóban. Élesítés: helyi merge commit a `main`-re, ugyanezzel a szerző–committer párossal (nem a GitHub-on készült merge, mert az a fiók elsődleges címét írhatja be).
-- Sorrend: előbb a migráció (a Supabase SQL Editorban), utána a `laszlobiri-com`, végül az aloldal.
+- Sorrend: a `laszlobiri-com` élesítése (vele a migráció: a `supabase-migrate` munkafolyamat magától lefuttatja), `npm run check:rls`, végül az aloldal. A migrációt kézzel nem kell futtatni.
 - Minden változás előtt: `npm run test:db`, `npm run test:smoke`; élesítés után `npm run check:rls`.
 
 ## Tesztek (`laszlobiri-com`)
