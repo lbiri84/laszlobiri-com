@@ -357,6 +357,49 @@ try {
   await P.page.waitForFunction(() => /Javítottként lezárva/.test(document.querySelector('.msg').textContent));
   check(rep.status === 'fixed' && !(await P.page.$('[data-rep]')), 'jelentés: „Javítva” után lezárul és eltűnik a listából');
 
+  // Jutalom 500 pontonként: a gyerek választ (akasztófa / szókereső / falbontó).
+  const sum = db.results.filter(r => r.pupil_id === mokus).reduce((t, r) => t + r.points, 0);
+  for (let need = 490 - sum; need > 0; need -= 198) db.results.push({ id: randomUUID(), pupil_id: mokus, kind: 'round', topic: 'abc', score: 0, best_streak: 0, answered: 10, correct: 0, points: Math.min(198, need), created_at: new Date(Date.now() - 86400000).toISOString(), recorded_by: dev });
+  await T.page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await settle(T.page); await T.page.waitForTimeout(500);
+  check((await T.page.textContent('.pts')) === '490 pont', `jutalom: 490 pontnál még nincs (${await T.page.textContent('.pts')})`);
+  let offered = false;
+  for (let i = 0; i < 6 && !offered; i++) { await playRound(T.page); offered = !!(await T.page.$('.mgoffer')); if (!offered) await T.page.click('[data-go="home"]'); }
+  check(offered, 'jutalom: 500 pont átlépésekor felajánlja a minijátékot');
+  check((await T.page.$$('.mgoffer [data-go="mg-hm"], .mgoffer [data-go="mg-ws"], .mgoffer [data-go="mg-bo"]')).length === 3, 'jutalom: választható az akasztófa, a szókereső és a falbontó');
+  await shot(T.page, 'jutalom');
+
+  // Falbontó: győzelem.
+  await T.page.click('[data-go="mg-bo"]');
+  await T.page.waitForSelector('#boCanvas');
+  await T.page.waitForTimeout(300);
+  await shot(T.page, 'falbonto');
+  const bo = await T.page.evaluate(() => ({ n: window.__gyakorlo.BO.bricks.length, lives: window.__gyakorlo.BO.lives, row: window.__gyakorlo.BO.colors.rows[0] }));
+  check(bo.n === 12 && bo.lives === 3, `falbontó: 12 tégla, 3 élet (${bo.n}, ${bo.lives})`);
+  check(bo.row === '#d77ca2', `falbontó: a téglák a gyerek témájának színét használják (rózsaszín: ${bo.row})`);
+  await T.page.click('#boCanvas');
+  await T.page.waitForFunction(() => !window.__gyakorlo.BO.ready);
+  check(true, 'falbontó: koppintásra indul a labda');
+  await T.page.evaluate(() => window.__gyakorlo.BO.bricks.forEach(b => { b.alive = false; }));
+  await T.page.waitForSelector('text=Lebontottad a falat');
+  await settle(T.page);
+  check(db.results.some(r => r.pupil_id === mokus && r.kind === 'breakout' && r.points === 10), 'falbontó: a győzelem +10 pont a szerveren');
+  check(db.badges.some(b => b.pupil_id === mokus && b.badge_id === 'falbonto'), 'falbontó: „Falbontó” jelvény');
+  check((await T.page.$$('[data-go="mg-bo"], [data-go="mg-hm"], [data-go="mg-ws"]')).length === 0, 'egy jutalom, egy játék: nincs „még egy” gomb');
+
+  // Falbontó: három kiesett labda után vége, pont nélkül.
+  await T.page.click('[data-go="home"]');
+  await T.page.evaluate(() => { const b = document.createElement('button'); b.dataset.go = 'mg-bo'; b.id = 'tmpbo'; document.getElementById('app').appendChild(b); });
+  await T.page.click('#tmpbo');
+  await T.page.waitForSelector('#boCanvas');
+  for (let i = 0; i < 3; i++) {
+    await T.page.evaluate(() => { const B = window.__gyakorlo.BO; B.ready = false; B.vx = 0; B.vy = 320; B.by = 392; });
+    await T.page.waitForTimeout(400);
+  }
+  await T.page.waitForSelector('text=Most nem sikerült. Legközelebb');
+  check(db.results.filter(r => r.kind === 'breakout').length === 1, 'falbontó: 3 kiesett labda után vége, a vesztes játék nem ad pontot');
+  await T.page.click('[data-go="home"]');
+
   // Kilépés a gyerek módból.
   await T.page.click('[data-go="kidexit"]');
   await T.page.fill('#kpin', '0000'); await T.page.click('[data-go="dokidexit"]');
