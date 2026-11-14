@@ -1,6 +1,6 @@
 # Backend terv: Supabase a laszlobiri oldalak mögé
 
-Állapot: **terv, még nincs kód**. A döntések és a még nyitott kérdések a dokumentum végén vannak.
+Állapot: **az 1. fázis kódja kész** (lásd az 5. szakaszt); az élesítéshez a kézi beállítások kellenek. A döntések és a még nyitott kérdések a dokumentum végén vannak.
 
 ## Kiindulás
 
@@ -45,7 +45,7 @@ private.allowed_emails   (nem érhető el az API-ból)
 ### Közös táblák
 
 **`private.allowed_emails`**: az allowlist a `private` sémában, amit a Data API nem tesz közzé.
-- `email` (citext, PK), `household_id` (uuid, null lehet), `household_role` (`parent`), `app_role` (`admin` | `user`), `note`, `created_at`.
+- `email` (text, PK, kisbetűvel tárolva; az összehasonlítás `lower()`-rel), `household_id` (uuid, null lehet), `household_role` (`parent`), `app_role` (`admin` | `user`), `note`, `created_at`.
 
 **`public.profiles`**
 - `id` (uuid, PK, FK → `auth.users.id`, on delete cascade), `display_name` (1–40), `app_role` (`admin` | `user`), `created_at`.
@@ -314,6 +314,14 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 - Migrációk: `profiles`, `households`, `household_members`, `private.allowed_emails`, hook, trigger, segédfüggvények.
 - `lib/v1/`, `belepes/`, `adatvedelem/`, `_config.yml` exclude.
 - pgTAP az alaptáblákra, `rls-check.mjs` 1. pont.
+- **Állapot: kész.** Ami elkészült:
+  - `supabase/migrations/20261114120000_core.sql`, `supabase/config.toml`, `supabase/seed.sql`, `supabase/README.md` (élesítési lépések);
+  - `supabase/tests/001_core_rls.test.sql`: 38 pgTAP teszt, helyben futtatva `npm run test:db` (sima Postgres 16 + pgTAP, Supabase-stubbal);
+  - `lib/v1/`: `config.js` (még üres), `client.js`, `auth.js`, `auth-badge.js`, `supabase.js` (supabase-js 2.118.0 + ssr 0.12.7, esbuild);
+  - `belepes/`, `adatvedelem/` (a kapcsolati cím még kitöltendő), `_config.yml`;
+  - `scripts/rls-check.mjs` (anon kulccsal, éles projekten futtatandó), `scripts/login-smoke.mjs` (böngészős füstpróba ál-Supabase szerverrel, 16 ellenőrzés).
+  - Eltérés a tervtől: az allowlist `text` oszlop `lower()`-rel, nem `citext` (üres `search_path` mellett a `citext` összehasonlítás kis- és nagybetű-érzékeny maradt). A trigger második rétegként akkor is elutasít, ha a hook nincs bekötve.
+  - Valódi Supabase-en még nem futott: a migráció, a hook eseményformátuma (`is_anonymous`) és a `.laszlobiri.com` süti a projekt létrehozása után ellenőrizendő.
 
 ### 2. fázis: bevásárlólista (`laszlobiri-com` migráció + `bevasarlo-lista`)
 - Migráció: `lists`, `items`, `item_history`, `bump_history`, Realtime publikáció, `pg_cron` takarítás. Tesztek.

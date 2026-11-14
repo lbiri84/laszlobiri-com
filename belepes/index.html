@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="hu" data-theme="slate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Belépés a laszlobiri oldalakra.">
+<meta name="theme-color" content="#293c4b">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Belépés · laszlobiri</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="/design-system/tokens.css">
+<style>
+  /* A laszlobiri design system alapján (design-system/README.md). */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12);
+    max-width: 720px; min-height: 100vh; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--fg); font-family: var(--font-sans);
+    font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased;
+  }
+  .mk .f{fill:var(--mark-filler)}.mk .l{fill:var(--mark-l)}.mk .b{fill:var(--mark-b)}.mk .lr{stroke:var(--mark-l)}.mk .br{stroke:var(--mark-ring)}
+  .mk circle[stroke-width] { fill: none; }
+  header.page { margin: clamp(8px, 4vw, 40px) 0 var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); align-items: flex-start; }
+  header.page a { display: block; }
+  .mk { width: 96px; height: auto; display: block; }
+  h1 { font-size: clamp(36px, 8vw, 44px); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  h2 { font-size: 20px; line-height: 28px; font-weight: 600; margin: var(--space-8) 0 var(--space-2); }
+  p, li { color: var(--fg-muted); }
+  p { margin: 0 0 var(--space-4); max-width: 62ch; }
+  a { color: var(--accent-text); }
+  main { flex: 1; }
+  footer { margin-top: var(--space-12); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--fg-muted); }
+  footer a { color: var(--fg-muted); }
+  @media (max-width: 640px) { body { padding-left: var(--space-4); padding-right: var(--space-4); } }
+  .card {
+    padding: var(--space-6); background: var(--bg-raised); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-4); align-items: flex-start;
+  }
+  .card p { margin: 0; }
+  .status { color: var(--fg); }
+  .status[data-kind="error"] { color: var(--accent-text); }
+  .btn {
+    font: 600 16px/24px var(--font-sans); cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: var(--space-3);
+    min-height: 48px; padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-full); border: 1px solid var(--accent);
+    background: var(--accent); color: var(--brand-black);
+  }
+  .btn.secondary { background: transparent; color: var(--fg); border-color: var(--line); }
+  .btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  .btn[disabled] { opacity: .6; cursor: wait; }
+  .row { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+  ul.apps { margin: 0; padding-left: var(--space-6); }
+  [hidden] { display: none !important; }
+</style>
+<script type="module" src="belepes.js"></script>
+</head>
+<body>
+
+<header class="page">
+  <a href="/" aria-label="laszlobiri főoldal"><svg class="mk" viewBox="0 0 81 53" role="img" aria-label="laszlobiri jel"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)"><circle class="f" cx="47.5" cy="5.5" r="4"/><circle class="f" cx="33.5" cy="19.5" r="4"/><circle class="f" cx="47.5" cy="33.5" r="4"/><circle class="f" cx="33.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="5.5" r="4"/><circle class="l" cx="5.5" cy="19.5" r="4"/><circle class="l" cx="5.5" cy="33.5" r="4"/><circle class="l" cx="5.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="61.5" r="4"/><circle class="l" cx="5.5" cy="75.5" r="4"/><circle class="l" cx="19.5" cy="75.5" r="4"/><circle class="l" cx="33.5" cy="75.5" r="4"/><circle class="l" cx="47.5" cy="75.5" r="4"/><circle class="b" cx="19.5" cy="5.5" r="4"/><circle class="b" cx="19.5" cy="19.5" r="4"/><circle class="b" cx="19.5" cy="33.5" r="4"/><circle class="b" cx="19.5" cy="47.5" r="4"/><circle class="b" cx="19.5" cy="61.5" r="4"/><circle class="b" cx="33.5" cy="5.5" r="4"/><circle class="b" cx="33.5" cy="33.5" r="4"/><circle class="b" cx="47.5" cy="19.5" r="4"/><circle class="lr" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/></g></g></svg></a>
+  <h1>Belépés</h1>
+</header>
+
+<main>
+  <section class="card" aria-live="polite">
+    <p class="status" id="status">Betöltés…</p>
+
+    <div class="row" id="signedOut" hidden>
+      <button class="btn" id="google" type="button">Belépés Google-lel</button>
+    </div>
+    <p id="signedOutNote" hidden>Csak engedélyezett címmel lehet belépni. Egy belépés a laszlobiri.com összes oldalán érvényes.</p>
+
+    <div class="row" id="signedIn" hidden>
+      <a class="btn" id="continue" href="/">Tovább</a>
+      <button class="btn secondary" id="signout" type="button">Kilépés</button>
+    </div>
+    <ul class="apps" id="apps" hidden>
+      <li><a href="https://bevasarlas.laszlobiri.com/">Bevásárlólista</a></li>
+      <li><a href="https://gyakorlas.laszlobiri.com/">Gyakorló</a></li>
+      <li><a href="https://ebed.laszlobiri.com/">Interfood rendelés</a></li>
+    </ul>
+  </section>
+</main>
+
+<footer><a href="/">laszlobiri.com</a><a href="/adatvedelem/">Adatkezelés</a></footer>
+
+</body>
+</html>
