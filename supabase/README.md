@@ -41,11 +41,25 @@ npm run check:rls
 
 Az éles projekt ellenőrzése a nyilvános kulccsal (HTTPS-proxy mögött `NODE_USE_ENV_PROXY=1`). Minden sornak „rendben”-nek kell lennie.
 
-## Új migráció élesítése
+## Új migráció élesítése (automatikus)
 
-1. A fájl tartalmát a dashboard SQL Editorában futtasd le (vagy `supabase link --project-ref eokwxkrcttsoxfflvuus`, majd `supabase db push`).
-2. `npm run check:rls`.
-3. Csak ezután élesedhet a kliens, amelyik az új táblát vagy oszlopot használja.
+A `.github/workflows/supabase-migrate.yml` munkafolyamat a `main` ágra kerülő új `supabase/migrations/*.sql` fájlokat magától lefuttatja az éles projekten (`supabase db push`, Supabase CLI 2.121.0). Csak az még nem alkalmazott migrációk futnak; a nyilvántartás a `supabase_migrations.schema_migrations` táblában van.
+
+1. A migráció a `main`-re kerül (a `laszlobiri-com` élesítésével).
+2. A munkafolyamat lefut (Actions → „Supabase migrációk”); a napló végén a „Állapot utána” lista mutatja, mi van alkalmazva.
+3. `npm run check:rls`.
+4. Csak ezután élesedhet a kliens (aloldal), amelyik az új táblát vagy oszlopot használja.
+
+Kézi indítás: Actions → „Supabase migrációk” → Run workflow; a „dry_run” bejelölésével csak kiírja, mit futtatna. A „repair” mező egyszeri javításra való: ha egy migráció valamiért kézzel (SQL Editorban) futott le, ide kell beírni a verzióját, hogy a CLI ne futtassa újra.
+
+### A munkafolyamat titkai (egyszer)
+
+A GitHubon: `laszlobiri-com` repó → Settings → Secrets and variables → Actions → New repository secret:
+
+- `SUPABASE_ACCESS_TOKEN`: Supabase dashboard → (jobb felső sarok) Account → Access Tokens → Generate new token. A token a teljes Supabase-fiókra érvényes, ezért csak ide kerüljön.
+- `SUPABASE_DB_PASSWORD`: az adatbázis jelszava (Project Settings → Database; ha nincs meg, ott újra beállítható).
+
+A titkok csak a `main` ágon futó munkafolyamatnak érhetők el; pull request (idegen forkból sem) nem futtatja.
 
 ## Új felhasználó
 
@@ -67,7 +81,7 @@ Ha valaki a felvétele előtt próbált belépni, a belépése elutasítva lett 
 3. Authentication → Sign In / Providers: **Google** be (Client ID + Secret a Google Cloudból); **Email** ki; **Allow anonymous sign-ins** be (a gyerek módhoz).
 4. Authentication → Rate Limits: az anonymous sign-ins korlátja alacsony (pl. óránként 10).
 5. Authentication → URL Configuration: Site URL `https://laszlobiri.com`; Redirect URLs: `https://laszlobiri.com/belepes/**`.
-6. A migrációk sorban (lásd fent). Ha a `pg_cron` nincs bekapcsolva, előbb Database → Extensions → `pg_cron`.
+6. A migrációk: a munkafolyamat futtatja őket (lásd fent). Ha a `pg_cron` nincs bekapcsolva, előbb Database → Extensions → `pg_cron`.
 7. Authentication → Hooks → *Before User Created* → Postgres, séma `private`, függvény `hook_before_user_created`.
 8. Háztartás és a két szülő címe:
 

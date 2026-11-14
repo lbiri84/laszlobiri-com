@@ -124,7 +124,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 
 - Commit **szerzője**: Laszlo Biri `<lbiri84@users.noreply.github.com>`; **committere**: Claude `<noreply@anthropic.com>`. A környezet a commitokat a Claude kulcsával SSH-val aláírja, és a GitHub ezt csak `noreply@anthropic.com` committerrel fogadja el („Verified”). Valódi e-mail cím nem kerül commitba. (2026-11-14 előtti commitoknál a committer is a noreply cím volt, ezért azok aláíratlannak látszanak; nem írjuk át őket.)
 - Munkaág: `claude/funny-turing-bphs2l` minden repóban. Élesítés: helyi merge commit a `main`-re, ugyanezzel a szerző–committer párossal (nem a GitHub-on készült merge, mert az a fiók elsődleges címét írhatja be).
-- Sorrend: előbb a migráció (a Supabase SQL Editorban), utána a `laszlobiri-com`, végül az aloldal.
+- Sorrend: a `laszlobiri-com` élesítése (vele a migráció: a `supabase-migrate` munkafolyamat magától lefuttatja), `npm run check:rls`, végül az aloldal. A migrációt kézzel nem kell futtatni.
 - Minden változás előtt: `npm run test:db`, `npm run test:smoke`; élesítés után `npm run check:rls`.
 
 ## Tesztek (`laszlobiri-com`)
