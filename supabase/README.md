@@ -13,6 +13,7 @@ Hogyan működik az egész: [`docs/backend-terv.md`](../docs/backend-terv.md). E
 | `migrations/20261114180000_practice.sql` | gyakorló: `pupils`, `results`, `pupil_badges`, gyerek mód (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing()`, `claim_pairing()`), napi takarítás |
 | `migrations/20261114200000_pupil_theme.sql` | gyerekprofil színtémája (`pupils.theme`: `slate` / `rose`) |
 | `migrations/20261114210000_pupil_theme_self.sql` | a tablet a hozzá rendelt gyerek színét írhatja, mást nem (`pupils_guard`) |
+| `migrations/20261114230000_pupil_theme_sky.sql` | harmadik gyerektéma: `sky` (égkék, világos) |
 | `migrations/20261114220000_question_reports.sql` | hibás feladat jelentése (`question_reports`) |
 | `tests/000_helpers.sql` | teszt-segédfüggvények (lekérdezés egy adott felhasználóként) |
 | `tests/001_core_rls.test.sql` … `005_question_reports.test.sql` | pgTAP tesztek a fenti migrációkhoz |

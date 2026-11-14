@@ -60,7 +60,7 @@ function rest(method, table, q, body, sub) {
     if (method === 'PATCH') {
       const id = inList(q, 'id')[0], p = db.pupils.find(x => x.id === id);
       // A szülő bármit, a hozzá rendelt tablet csak a színt írhatja (pupils_guard).
-      if (p && canPupil(sub, id)) { if (!['slate', 'rose'].includes(body.theme)) return err(400, '23514', 'theme'); p.theme = body.theme; }
+      if (p && canPupil(sub, id)) { if (!['slate', 'rose', 'sky'].includes(body.theme)) return err(400, '23514', 'theme'); p.theme = body.theme; }
       return { status: 204 };
     }
     if (method === 'DELETE') {
@@ -302,6 +302,13 @@ try {
   await T.page.evaluate(() => window.dispatchEvent(new Event('online')));
   await settle(T.page);
   check(db.pupils.find(p => p.id === mokus).theme === 'slate', 'téma: a tablet választása visszatérő hálózatnál a szerverre került');
+  // Égkék (világos) téma a tableten.
+  await T.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="sky"]`);
+  await settle(T.page);
+  const sky = await T.page.evaluate(() => [document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor, getComputedStyle(document.querySelector('.mk .l')).fill]);
+  check(sky[0] === 'sky' && sky[1] === 'rgb(231, 248, 252)' && sky[2] === 'rgb(0, 0, 0)', `téma: égkék, világos háttér, a jel L betűje fekete (${sky.join(', ')})`);
+  check(db.pupils.find(p => p.id === mokus).theme === 'sky', 'téma: az égkék a szerverre került');
+  await shot(T.page, 'egkek-kezdo');
   await T.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="rose"]`);
   await settle(T.page);
   await T.page.reload(); await visible(T.page);

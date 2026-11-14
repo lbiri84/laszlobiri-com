@@ -58,7 +58,7 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 | `lists` | háztartásonként egy lista (trigger hozza létre) | tagok | név: tagok |
 | `items` | tétel (`name_key` egyedi az élő tételek között, soft delete) | tagok | tagok; `created_by`, `updated_*`, `list_id` a szerveré; valódi törlés nincs |
 | `item_history` | „gyakran vett” javaslatok | tagok | csak `bump_history()` |
-| `pupils` | becenév, ikon, `theme` (`slate` / `rose`) | szülő; a tablet a hozzá rendelteket | szülő; a tablet csak a hozzá rendelt gyerek `theme`-jét (`pupils_guard`) |
+| `pupils` | becenév, ikon, `theme` (`slate` / `rose` / `sky`) | szülő; a tablet a hozzá rendelteket | szülő; a tablet csak a hozzá rendelt gyerek `theme`-jét (`pupils_guard`) |
 | `results` | befejezett kör / minijáték (csak hozzáfűzés) | szülő; a tablet a hozzá rendelteket | szülő / tablet; `recorded_by` a szerveré; törölni csak a szülő |
 | `pupil_badges` | jelvények | mint `results` | mint `results` |
 | `devices`, `device_pupils` | párosított gyerek tabletek | szülő; a tablet a sajátját | `claim_pairing()`; törlés (visszavonás): szülő |
@@ -99,7 +99,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 - Szülő: „Ki gyakorol?” → gyerek; szülői nézet: gyerekprofilok, eredmények (utolsó 5 kör), gyerek tabletek (párosítás, visszavonás, „Ez az eszköz legyen a gyerek tablet”), jelentett feladatok.
 - A pont, a szint, a napi sorozat, a témánkénti legjobb és a jelvények az eredményekből számolódnak. Csak a befejezett kör és a megnyert minijáték mentődik.
 - Gyerek mód: a tablet csak a hozzá rendelt gyerekeket látja; kilépés „Szülő” → PIN.
-- Színtéma: a gyerek maga választja a kezdőképernyőn („Színem”); a rózsaszín a gyerek saját nézeteiben él, a „Ki gyakorol?” és a szülői nézet palakék.
+- Színtéma: a gyerek maga választja a kezdőképernyőn („Színem”): palakék, rózsaszín (sötét) vagy égkék (világos). A választott téma a gyerek saját nézeteiben él, a „Ki gyakorol?” és a szülői nézet palakék.
 - Hibás feladat: a kérdésnél „⚑” → okkód; a szülői nézetben „Javítva” / „Elvetés” és „Szövegként másolás” a javításhoz (a gyerek neve nélkül).
 
 ## Döntések
