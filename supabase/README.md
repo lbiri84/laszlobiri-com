@@ -9,6 +9,8 @@ A terv: [`docs/backend-terv.md`](../docs/backend-terv.md). Ebben a mappában a s
 | `migrations/20261114180000_practice.sql` | 3. fázis: `pupils`, `results`, `pupil_badges`, gyerek mód (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing()`, `claim_pairing()`), napi takarítás |
 | `migrations/20261114200000_pupil_theme.sql` | gyerekprofilonként választható színtéma (`pupils.theme`: `slate` / `rose`) |
 | `migrations/20261114210000_pupil_theme_self.sql` | a gyerek (a saját tabletjén is) maga választja a színét; a tablet csak a `theme`-et írhatja (`pupils_guard`) |
+| `migrations/20261114220000_question_reports.sql` | hibás feladat jelentése (`question_reports`): a gyerek / tablet beküldi, csak a szülő látja és zárja le |
+| `tests/005_question_reports.test.sql` | pgTAP tesztek a jelentésekhez |
 | `tests/004_pupil_theme.test.sql` | pgTAP tesztek: a téma beállítása és korlátai |
 | `tests/003_practice.test.sql` | pgTAP tesztek: gyerekprofilok, eredmények, párosítás, az eszköz jogai, visszavonás |
 | `tests/002_lists.test.sql` | pgTAP tesztek: megosztás, idegen lista, duplikátum, törlés/visszavonás, előzmény |
