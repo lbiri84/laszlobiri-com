@@ -99,7 +99,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 - Szülő: „Ki gyakorol?” → gyerek; szülői nézet: gyerekprofilok, eredmények (utolsó 5 kör), gyerek tabletek (párosítás, visszavonás, „Ez az eszköz legyen a gyerek tablet”), jelentett feladatok.
 - A pont, a szint, a napi sorozat, a témánkénti legjobb és a jelvények az eredményekből számolódnak. Csak a befejezett kör és a megnyert minijáték mentődik.
 - Gyerek mód: a tablet csak a hozzá rendelt gyerekeket látja; kilépés „Szülő” → PIN.
-- Minijáték: 1000 pontonként jutalom; a gyerek választ akasztófa, szókereső és falbontó (2 × 6 tégla, 3 élet, a téma színeivel) közül. Egy jutalom egy játék; győzelem +10 pont.
+- Minijáték: 500 pontonként jutalom; a gyerek választ akasztófa, szókereső és falbontó (2 × 6 tégla, 3 élet, a téma színeivel) közül. Egy jutalom egy játék; győzelem +10 pont.
 - Színtéma: a gyerek maga választja a kezdőképernyőn („Színem”): palakék, rózsaszín (sötét) vagy égkék (világos). A választott téma a gyerek saját nézeteiben él, a „Ki gyakorol?” és a szülői nézet palakék.
 - Hibás feladat: a kérdésnél „⚑” → okkód; a szülői nézetben „Javítva” / „Elvetés” és „Szövegként másolás” a javításhoz (a gyerek neve nélkül).
 
@@ -114,7 +114,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 | gyerekek saját eszköze | gyerek mód: névtelen, párosított eszközfiók, PIN-nel lehet kilépni |
 | listák | egy közös lista háztartásonként; közös gyorsjavaslatok |
 | félbehagyott kör | nem számít |
-| minijáték | 1000 pontonként, választható (akasztófa, szókereső, falbontó), egy jutalom egy játék |
+| minijáték | 500 pontonként, választható (akasztófa, szókereső, falbontó), egy jutalom egy játék |
 | régi helyi adatok (lista, pontok) | az új verzió első indításkor törli (`bevasarlo-lista.v1`, `gyakorlo.v1`), nem kerülnek fel |
 | színtéma | gyerekenként, a gyerek választja; a jel színei nem változnak |
 | hibás feladat | „⚑” jelentés okkóddal, szabad szöveg nélkül; a javítás a szülőn keresztül, a másolt szöveg alapján |

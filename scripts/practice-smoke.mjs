@@ -357,15 +357,15 @@ try {
   await P.page.waitForFunction(() => /Javítottként lezárva/.test(document.querySelector('.msg').textContent));
   check(rep.status === 'fixed' && !(await P.page.$('[data-rep]')), 'jelentés: „Javítva” után lezárul és eltűnik a listából');
 
-  // Jutalom 1000 pontonként: a gyerek választ (akasztófa / szókereső / falbontó).
+  // Jutalom 500 pontonként: a gyerek választ (akasztófa / szókereső / falbontó).
   const sum = db.results.filter(r => r.pupil_id === mokus).reduce((t, r) => t + r.points, 0);
-  for (let need = 990 - sum; need > 0; need -= 198) db.results.push({ id: randomUUID(), pupil_id: mokus, kind: 'round', topic: 'abc', score: 0, best_streak: 0, answered: 10, correct: 0, points: Math.min(198, need), created_at: new Date(Date.now() - 86400000).toISOString(), recorded_by: dev });
+  for (let need = 490 - sum; need > 0; need -= 198) db.results.push({ id: randomUUID(), pupil_id: mokus, kind: 'round', topic: 'abc', score: 0, best_streak: 0, answered: 10, correct: 0, points: Math.min(198, need), created_at: new Date(Date.now() - 86400000).toISOString(), recorded_by: dev });
   await T.page.evaluate(() => window.dispatchEvent(new Event('online')));
   await settle(T.page); await T.page.waitForTimeout(500);
-  check((await T.page.textContent('.pts')) === '990 pont', `jutalom: 990 pontnál még nincs (${await T.page.textContent('.pts')})`);
+  check((await T.page.textContent('.pts')) === '490 pont', `jutalom: 490 pontnál még nincs (${await T.page.textContent('.pts')})`);
   let offered = false;
   for (let i = 0; i < 6 && !offered; i++) { await playRound(T.page); offered = !!(await T.page.$('.mgoffer')); if (!offered) await T.page.click('[data-go="home"]'); }
-  check(offered, 'jutalom: 1000 pont átlépésekor felajánlja a minijátékot');
+  check(offered, 'jutalom: 500 pont átlépésekor felajánlja a minijátékot');
   check((await T.page.$$('.mgoffer [data-go="mg-hm"], .mgoffer [data-go="mg-ws"], .mgoffer [data-go="mg-bo"]')).length === 3, 'jutalom: választható az akasztófa, a szókereső és a falbontó');
   await shot(T.page, 'jutalom');
 
