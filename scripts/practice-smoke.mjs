@@ -59,7 +59,8 @@ function rest(method, table, q, body, sub) {
     }
     if (method === 'PATCH') {
       const id = inList(q, 'id')[0], p = db.pupils.find(x => x.id === id);
-      if (isParent(sub) && p) { if (!['slate', 'rose'].includes(body.theme)) return err(400, '23514', 'theme'); p.theme = body.theme; }
+      // A szülő bármit, a hozzá rendelt tablet csak a színt írhatja (pupils_guard).
+      if (p && canPupil(sub, id)) { if (!['slate', 'rose'].includes(body.theme)) return err(400, '23514', 'theme'); p.theme = body.theme; }
       return { status: 204 };
     }
     if (method === 'DELETE') {
@@ -208,12 +209,18 @@ try {
   const mokus = db.pupils.find(p => p.nickname === 'Mókus').id;
   const bgOf = page => page.evaluate(() => [document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor]);
 
-  // Színtéma: Mókus rózsaszín (a szülői nézetben), Süni marad palakék.
+  // Színtéma: a szülői nézetben már nincs választó; Mókus a saját kezdőképernyőjén választ.
   await P.page.click('[data-go="parent"]');
+  await P.page.waitForSelector('#nick');
+  check((await P.page.$$('[data-theme-pupil], input[name=th]')).length === 0, 'téma: a szülői nézetben nincs színválasztó');
+  await P.page.click('[data-go="who"]');
+  await P.page.waitForSelector('[data-pupil]');
+  await P.page.click(`[data-pupil="${mokus}"]`);
+  await P.page.waitForSelector('.whobar');
+  check((await bgOf(P.page))[0] === 'slate', 'téma: alapból palakék');
   await P.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="rose"]`);
-  await P.page.waitForFunction(() => /színe: Rózsaszín/.test(document.querySelector('.msg').textContent));
-  check(db.pupils.find(p => p.id === mokus).theme === 'rose', 'téma: a szülő Mókust rózsaszínre állítja (szerveren)');
-  check((await bgOf(P.page))[0] === 'slate', 'téma: a szülői nézet marad palakék');
+  await settle(P.page);
+  check(db.pupils.find(p => p.id === mokus).theme === 'rose', 'téma: Mókus a kezdőképernyőn rózsaszínt választ (szerveren)');
   await P.page.click('[data-go="who"]');
   await P.page.waitForSelector('[data-pupil]');
   check((await bgOf(P.page))[0] === 'slate', 'téma: a „Ki gyakorol?” marad palakék');
@@ -277,6 +284,16 @@ try {
   check((await T.page.evaluate(() => document.cookie)).indexOf('auth-token') < 0, 'tablet: az eszközfiók nem a közös sütiben van');
   check(T.page.url().indexOf('#parositas') < 0, 'tablet: a párosítás után a kezdőképernyőre ugrik');
   check((await bgOf(T.page))[0] === 'rose', 'téma: Mókus tabletje rózsaszín');
+  // A tableten a gyerek visszaállítja, offline is (a kimenő soron át megy fel).
+  await T.ctx.setOffline(true);
+  await T.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="slate"]`);
+  check((await bgOf(T.page))[0] === 'slate', 'téma: a tableten offline is azonnal vált');
+  await T.ctx.setOffline(false);
+  await T.page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await settle(T.page);
+  check(db.pupils.find(p => p.id === mokus).theme === 'slate', 'téma: a tablet választása visszatérő hálózatnál a szerverre került');
+  await T.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="rose"]`);
+  await settle(T.page);
   await T.page.reload(); await visible(T.page);
   check(await T.page.evaluate(() => document.documentElement.dataset.theme) === 'rose', 'téma: újratöltéskor rögtön rózsaszín (nincs villanás)');
   await shot(T.page, 'tablet-kezdo');
