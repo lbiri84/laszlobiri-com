@@ -2,6 +2,11 @@
 <html lang="hu">
 <head>
 <meta charset="utf-8">
+<!-- Belépési kapu (lib/v1/gate.js): belépés nélkül azonnal a belépőoldalra irányít. -->
+<style id="lb-gate">html{visibility:hidden}</style>
+<script>/* lb-gate */if(!/(?:^|;\s*)sb-[a-z0-9]+-auth-token(?:\.0)?=/.test(document.cookie))location.replace('/belepes/?next='+encodeURIComponent(location.href))</script>
+<script type="module" src="/lib/v1/gate.js"></script>
+<script type="module" src="/lib/v1/auth-badge.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Biri László saját alkalmazásai egy helyen.">
@@ -111,6 +116,8 @@
     display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
     font-size: 14px; line-height: 20px; color: var(--fg-muted);
   }
+  footer a { color: var(--fg-muted); }
+  footer { align-items: center; }
 
   @media (max-width: 640px) { body { padding-left: var(--space-4); padding-right: var(--space-4); } }
   @media (prefers-reduced-motion: reduce) {
@@ -167,7 +174,7 @@
   </ul>
 </main>
 
-<footer><span>laszlobiri.com</span><span>© 2026 Biri László</span></footer>
+<footer><span>laszlobiri.com · <a href="/adatvedelem/">Adatkezelés</a></span><lb-auth></lb-auth><span>© 2026 Biri László</span></footer>
 
 </body>
 </html>
