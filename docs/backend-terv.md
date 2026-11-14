@@ -109,11 +109,11 @@ Javaslat: **az eredmények csak hozzáfűzhető események**, a pontszámot, a s
 **`public.results`**: egy sor egy befejezett kör vagy minijáték.
 - `id` (uuid, kliens generálja: az offline beküldés ismétlése így nem duplikál)
 - `pupil_id` (FK, cascade)
-- `kind`: `round` | `hangman` | `wordsearch` | `import`
+- `kind`: `round` | `hangman` | `wordsearch`
 - `topic` (check `^[a-z0-9]{1,32}$`, `round` esetén kötelező)
 - `score` (0–10), `best_streak` (0–10), `points` (az így szerzett pont), `answered`, `correct`
 - `created_at`, `recorded_by` (FK → profiles)
-- Az `import` sor a mai helyi állapot átvitelére szolgál: a `points`, `answered`, `correct` és `rounds` összesítőt egy sorban hozza át. A témánkénti `best`/`played` és a napi sorozat nem jön át; a már megszerzett jelvények viszont igen (lásd lent).
+- Döntés: a mai helyi pontok **nem kerülnek át**, a két gyerek nulláról indul. Ezért nincs import sor, és a `results` csak valódi körökből és minijátékokból áll.
 - Index: (`pupil_id`, `created_at desc`).
 - Döntés: **csak a befejezett kör számít**. Ma a félbehagyott kör jó válaszai is pontot érnek (válaszonként ment); az új modellben a pont, a megválaszolt és a jó válaszok száma a `finish()`-ben, egyszerre íródik. Ez a kijelentkezett, helyi üzemmódra is vonatkozik, hogy a két mód ugyanúgy számoljon.
 
@@ -305,7 +305,7 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 - **Belépve**: a kezdőképernyőn „Ki gyakorol?” választó (becenév + ikon); a választott gyerek `id`-ja eszközönként `localStorage`-ban.
   - A mai `S` állapot gyerekenként a `results` és `pupil_badges` sorokból számolódik (`points` = a `points` összege, `rounds`, `perfect`, `best[topic]`, `played[topic]`, `days`/`lastDay` a dátumokból, `mgWins`/`wsWins` a `kind` alapján, `mgDone`/`mgN` a pontból). A `finish()` és a minijáték-győzelem egy-egy `results` sort ír; az új jelvény egy `pupil_badges` sort.
   - Az írás ugyanazzal a kimenő sorral történik (`lib/v1/outbox.js`), csak beszúrás, így offline gyakorlás is szinkronizálódik.
-- **Átállás**: első belépéskor, ha a `gyakorlo.v1` nem üres: „Kié ez az eredmény?” → a választott gyerekhez egy `import` sor és a meglévő jelvények.
+- **Átállás**: nincs. A `gyakorlo.v1` helyi állapot érintetlen marad, és kijelentkezve továbbra is az látszik; belépve a gyerekprofilok nulláról indulnak. Belépéskor egy egyszeri, rövid tájékoztatás jelzi, hogy a régi pontok ezen az eszközön, kijelentkezve maradnak meg.
 - Szülői nézet: gyerekenként az utolsó körök, témánkénti legjobb és átlag, jelvények.
 - `sw.js` módosítás (lásd fent). A README „Nincs fiók, semmit nem küld sehová” mondata frissül: belépés nélkül ez igaz marad, belépve a szülő fiókjába ment.
 
@@ -361,9 +361,9 @@ A 2. és 3. fázishoz a `bevasarlo-lista` és a `gyakorlas` repót írási jogga
 | listák száma | egy közös lista háztartásonként |
 | gyorsjavaslatok | közösek |
 | félbehagyott kör | nem számít, csak a befejezett kör |
+| mai helyi gyakorló pontok | nem kerülnek át, a gyerekek nulláról indulnak |
 | csomag | ingyenes Supabase + helyi, titkosított mentő szkript |
 
 ## Nyitott kérdések
 
-1. **A mai helyi pontok**: a telefonokon lévő `gyakorlo.v1` állapot melyik gyereké? Ha egy eszközön mindkét gyerek játszott, az import nem tudja szétválasztani: vagy az egyikhez kerül, vagy a gyerekek nulláról indulnak.
-2. **Eszköz**: a gyerekek a ti telefonotokon gyakorolnak, vagy saját eszközön (pl. tablet)? Saját eszközön szülői belépés kell, és azon a bevásárlólista is elérhető lenne.
+1. **Eszköz**: a gyerekek a ti telefonotokon gyakorolnak, vagy saját eszközön (pl. tablet)? Saját eszközön szülői belépés kell, és azon a bevásárlólista is elérhető lenne.
