@@ -136,7 +136,7 @@ Döntés: a gyerekek saját eszközön (pl. tablet) is gyakorolnak, ezért **gye
 
 Függvények (`security definer`, `set search_path = ''`, `anon`-tól és `public`-tól visszavonva):
 - `public.create_pairing(pupil_ids uuid[], label text) → text`: csak `parent` hívhatja, csak a saját háztartása gyerekeire. Visszaadja a kódot.
-- `public.claim_pairing(code text) → void`: csak névtelen (`is_anonymous`), még párosítatlan fiók hívhatja. Ellenőrzi a lejáratot és az egyszeri használatot, létrehozza a `devices` és a `device_pupils` sorokat.
+- `public.claim_pairing(code text) → text`: csak névtelen (`is_anonymous`), még párosítatlan fiók hívhatja. Ellenőrzi a lejáratot és az egyszeri használatot, létrehozza a `devices` és a `device_pupils` sorokat. Eredménye `'ok'` vagy `'invalid'`: hibás kódnál szándékosan nem dob kivételt, mert az a hibás próbálkozások számlálóját (fiókonként legfeljebb 10) is visszagörgetné.
 - `private.is_device_for(pupil_id) → bool`: a hívó eszközfiókhoz tartozik-e az adott gyerekprofil.
 
 Takarítás (`pg_cron`, naponta):
@@ -379,6 +379,11 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 - **Átállás**: nincs. Az új verzió első indításkor törli a `gyakorlo.v1` kulcsot; a gyerekprofilok nulláról indulnak.
 - Szülői nézet: gyerekenként az utolsó körök, témánkénti legjobb és átlag, jelvények; „Eszközök” lista és „Új eszköz” párosítás.
 - **Gyerek mód** (a 3. fázis második fele): migráció (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing`, `claim_pairing`, takarítás), `lib/v1/device.js`, a gyerek mód felülete, PIN, visszavonás, tesztek. Kézi teszt egy iPaden telepített appként: párosítás, offline gyakorlás, visszakapcsolás, visszavonás, és hogy a tableten a `bevasarlas.` oldal üres.
+- **Állapot: a kód kész, élesítésre vár.**
+  - `supabase/migrations/20261114180000_practice.sql` + `supabase/tests/003_practice.test.sql` (50 pgTAP teszt: szülő és idegen háztartás, eszköz csak a hozzá rendelt gyereket látja és írja, kód egyszer használható és lejár, 10 hibás próbálkozás után zár, visszavonás, takarítás);
+  - `lib/v1/device.js`; a gyakorlas `index.html` (kapu szülőre / tabletre / párosításra, „Ki gyakorol?”, szülői nézet, párosítás, gyerek mód PIN-nel), `sw.js` (`gyakorlo-v6`), README;
+  - `scripts/practice-smoke.mjs`: szülő + két tablet ál-Supabase-zel, 34 ellenőrzés (profilok, kör mentése, félbehagyott kör nem számít, párosítás, offline kör a tableten, kilépés PIN-nel, visszavonás, „Ez az eszköz legyen a gyerek tablet”, kikapcsolt névtelen belépés).
+  - A „Ez az eszköz legyen a gyerek tablet” a szülő munkamenetét közvetlenül zárja le (kijelentkezés a szerveren + a sütik törlése), nem a kliens `signOut`-jával, mert az a kapu átirányítását váltaná ki a párosítás közben.
 - `sw.js` módosítás (lásd fent). A README „Nincs fiók, semmit nem küld sehová” mondata frissül: az oldal csak belépve használható, és az eredmények a háztartáshoz mentődnek.
 
 ### 4. fázis: mentés, export, üzemeltetés
