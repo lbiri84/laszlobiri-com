@@ -43,11 +43,7 @@ Az éles projekt ellenőrzése a nyilvános kulccsal (HTTPS-proxy mögött `NODE
 
 ## Új migráció élesítése
 
-**Jelenleg kézi**: a munkafolyamat titkai még nincsenek beállítva, ezért a migrációt a dashboard SQL Editorában kell lefuttatni, a `laszlobiri-com` élesítése előtt vagy után, de mindenképp az aloldal élesítése előtt. A munkafolyamat addig minden migrációs élesítésnél lefut, és a „Titkok ellenőrzése” lépésnél ártalmatlanul elbukik (az adatbázishoz nem nyúl).
-
-**Átállás automatikusra**: a két titok beállítása (lent), majd egy kézi indítás, a „repair” mezőben az összes eddig kézzel lefuttatott migráció verziójával (jelenleg: `20261114120000 20261114150000 20261114180000 20261114200000 20261114210000 20261114220000 20261114230000`), „dry_run” bejelölve. Ha a napló szerint nincs hátralévő migráció, kész.
-
-### Automatikus mód
+**Automatikus** (2026-11-14 óta; az addig kézzel lefuttatott hét migráció egy „repair” futással megjelölve).
 
 A `.github/workflows/supabase-migrate.yml` munkafolyamat a `main` ágra kerülő új `supabase/migrations/*.sql` fájlokat magától lefuttatja az éles projekten (`supabase db push`, Supabase CLI 2.121.0). Csak az még nem alkalmazott migrációk futnak; a nyilvántartás a `supabase_migrations.schema_migrations` táblában van.
 
@@ -62,7 +58,7 @@ Kézi indítás: Actions → „Supabase migrációk” → Run workflow; a „d
 
 A GitHubon: `laszlobiri-com` repó → Settings → Secrets and variables → Actions → New repository secret:
 
-- `SUPABASE_ACCESS_TOKEN`: Supabase dashboard → (jobb felső sarok) Account → Access Tokens → Generate new token. A token a teljes Supabase-fiókra érvényes, ezért csak ide kerüljön.
+- `SUPABASE_ACCESS_TOKEN`: Supabase dashboard → (jobb felső sarok) Account → Access Tokens → Generate new token. Hozzáférési kör: **Projects**, csak az `eokwxkrcttsoxfflvuus` projekt; jogok: Project, Database, Application services: Read; a többi: No access. (A migrációt a CLI az adatbázis-jelszóval futtatja, a token csak a projekt adatainak lekérdezéséhez kell.) Lejáratkor új tokent kell generálni és itt frissíteni.
 - `SUPABASE_DB_PASSWORD`: az adatbázis jelszava (Project Settings → Database; ha nincs meg, ott újra beállítható).
 
 A titkok csak a `main` ágon futó munkafolyamatnak érhetők el; pull request (idegen forkból sem) nem futtatja.
