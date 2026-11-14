@@ -387,6 +387,24 @@ try {
   check(db.badges.some(b => b.pupil_id === mokus && b.badge_id === 'falbonto'), 'falbontó: „Falbontó” jelvény');
   check((await T.page.$$('[data-go="mg-bo"], [data-go="mg-hm"], [data-go="mg-ws"]')).length === 0, 'egy jutalom, egy játék: nincs „még egy” gomb');
 
+  // Akasztófa: két segítség, kérésre.
+  await T.page.click('[data-go="home"]');
+  await T.page.evaluate(() => { const b = document.createElement('button'); b.dataset.go = 'mg-hm'; b.id = 'tmphm'; document.getElementById('app').appendChild(b); });
+  await T.page.click('#tmphm');
+  await T.page.waitForSelector('.hm');
+  const hm0 = await T.page.evaluate(() => ({ miss: window.__gyakorlo.MG.miss.length, got: window.__gyakorlo.MG.got.length, w: window.__gyakorlo.MG.word }));
+  await T.page.click('[data-go="hmhint"]');
+  const hm1 = await T.page.evaluate(() => ({ miss: window.__gyakorlo.MG.miss.length, got: window.__gyakorlo.MG.got.slice(), w: window.__gyakorlo.MG.word }));
+  check(hm1.got.length === hm0.got + 1 && hm1.got[0] === hm1.w[0] && hm1.miss === 0, `akasztófa: az 1. segítség megmutatja az első betűt (${hm1.w}: ${hm1.got[0]}), életet nem visz`);
+  check(await T.page.isVisible('text=1. segítség: megmutattam egy betűt'), 'akasztófa: az 1. segítség szövege látszik');
+  const done1 = await T.page.evaluate(() => window.__gyakorlo.MG.done);
+  if (!done1) {
+    await T.page.click('[data-go="hmhint"]');
+    check(await T.page.isVisible('text=2. segítség'), 'akasztófa: kérhető a 2. segítség');
+    check(!(await T.page.$('[data-go="hmhint"]')), 'akasztófa: két segítség után nincs több');
+  }
+  await shot(T.page, 'akasztofa-segitseg');
+
   // Falbontó: három kiesett labda után vége, pont nélkül.
   await T.page.click('[data-go="home"]');
   await T.page.evaluate(() => { const b = document.createElement('button'); b.dataset.go = 'mg-bo'; b.id = 'tmpbo'; document.getElementById('app').appendChild(b); });
