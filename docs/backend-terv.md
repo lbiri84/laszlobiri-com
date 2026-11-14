@@ -394,7 +394,7 @@ A belépés gomb és a heti kijelölés közös mentése (`meal_picks`), ha igé
 
 ### Google Cloud
 1. Új projekt (pl. „laszlobiri”).
-2. OAuth consent screen: External; név „laszlobiri”; authorized domain: `laszlobiri.com` és `supabase.co`; főoldal `https://laszlobiri.com`, adatvédelem `https://laszlobiri.com/adatvedelem/`. Scope-ok: `openid`, `email`, `profile`. Logót ne tölts fel (ellenőrzést indítana). Testing mód + tesztfelhasználók, vagy Production.
+2. OAuth consent screen: External; név „laszlobiri”; authorized domain: `laszlobiri.com` és `eokwxkrcttsoxfflvuus.supabase.co` (a `supabase.co` a Public Suffix List része, ezért önmagában nem fogadja el a Google; ha a projektcímet sem, elég a `laszlobiri.com`); főoldal `https://laszlobiri.com`, adatvédelem `https://laszlobiri.com/adatvedelem/`. Scope-ok: `openid`, `email`, `profile`. Logót ne tölts fel (ellenőrzést indítana). Testing mód + tesztfelhasználók, vagy Production.
 3. Ha domain-ellenőrzést kér: Search Console, **HTML-fájlos** módszer, nem DNS-rekord.
 4. Credentials → OAuth client ID, „Web application”. Authorized redirect URI: `https://<projekt-ref>.supabase.co/auth/v1/callback`. JavaScript origin: `https://laszlobiri.com`.
 5. A Client ID és Secret a Supabase Google providerébe kerül (a Secret csak oda).
