@@ -67,8 +67,26 @@ Space Grotesk, a Google Fontsból (`https://fonts.googleapis.com/css2?family=Spa
 
 Tokeneket a `tokens.css` adja (CSS változók, `--bg`, `--fg`, `--accent`…). A témát a `data-theme="slate"` vagy `data-theme="light"` választja. Új oldalnál az `bg` háttérre és az `fg` szövegre épülj, és a narancshoz az `accent-text`-et használd, ha szöveg.
 
+### Új oldal vagy app bekötése (központi tokenek)
+
+A `tokens.css` egyetlen példánya itt van, és közzé van téve: **`https://laszlobiri.com/design-system/tokens.css`**. Az aloldalak (Interfood, Bevásárlólista és minden új) ezt töltik be, **nem tartanak helyi másolatot**:
+
+```html
+<link rel="preconnect" href="https://laszlobiri.com">
+<link rel="stylesheet" href="https://laszlobiri.com/design-system/tokens.css">
+```
+
+Szabályok:
+
+- **Ne másold** a `tokens.css`-t az aloldal repójába, és ne vedd fel a közzétételi (Actions) másoló lépésbe. Token módosítása csak itt, a `tokens.json`-ban történik, utána a `tokens.css` újragenerálása, és az aloldalak maguktól megkapják.
+- **Az útvonal publikus szerződés**: a `design-system/tokens.css` nem nevezhető át és nem mozdítható el, és a változónevek (`--bg`, `--fg`, `--accent`…) nem törölhetők vagy nevezhetők át, mert az aloldalak ezektől függenek. Törő változtatásnál előbb új, verziózott útvonal (pl. `design-system/v2/tokens.css`) jöjjön létre, és az aloldalakat egyenként át kell állítani.
+- **Ami helyben marad az aloldalon**: az `icon.svg` és az alkalmazás ikonjai (a manifest és az `apple-touch-icon` miatt), a téma kiválasztása (`data-theme`) és az oldal saját CSS-e.
+- **PWA-nál** (service worker): a `tokens.css` ne kerüljön az előre mentett (`ASSETS`) listába, mert az install lépés CORS nélkül elbukhat. A hálózat-először kezelő az első betöltéskor lementi, így offline is elérhető.
+- **Függés**: ha a `laszlobiri.com` nem érhető el, az aloldal stílus nélkül jelenik meg. A főoldal elérhetősége ezért mindhárom oldalra hat.
+- **Ellenőrzés új oldalnál**: megnyitás után a böngésző hálózati paneljén a `tokens.css` kérésnek 200-assal kell visszajönnie.
+
 ## Fájlok ebben a repóban
 
-- `tokens.json`: a tokenek forrása. `tokens.css`: ebből generált CSS-változók (`data-theme="slate"` vagy `"light"`).
+- `tokens.json`: a tokenek forrása. `tokens.css`: ebből generált CSS-változók (`data-theme="slate"` vagy `"light"`); az aloldalak ezt a fájlt töltik be a `laszlobiri.com` címről (lásd fent).
 - `assets/logo/mark-on-slate.svg` és `mark-on-light.svg`: a jel, palakék és világos alapra.
 - `components/Logo`, `components/Cover`: az élő előnézetek (a Claude design system oldalán nyílnak meg, a `tokens.css`-t várják).
