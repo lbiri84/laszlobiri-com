@@ -34,17 +34,47 @@ let failed = 0;
 const pass = msg => console.log('  rendben  ' + msg);
 const fail = msg => { failed++; console.log('  HIBA     ' + msg); };
 
-// Elutasítottnak számít: hiba, vagy üres eredmény (az RLS minden sort kiszűr).
+// Csak a jogosultsági elutasítás számít sikernek. Hálózati hiba vagy hiányzó
+// tábla NEM: az nem bizonyítja, hogy az RLS véd.
+const DENIED = new Set(['42501', 'PGRST301', 'PGRST302']);      // nincs jog / RLS / nincs JWT
+const MISSING = new Set(['PGRST205', '42P01', 'PGRST204']);      // tábla vagy oszlop nem létezik
+
+function classify(error) {
+  const code = error?.code || '';
+  if (DENIED.has(code)) return 'denied';
+  if (MISSING.has(code)) return 'missing';
+  if (!code || /fetch failed|network|ECONN|ENOTFOUND/i.test(error?.message || '')) return 'network';
+  return 'other';
+}
+function report(label, error, extraOk = []) {
+  const kind = classify(error);
+  const tag = `${error.code || '-'}: ${error.message}`;
+  if (kind === 'denied' || extraOk.includes(error.code)) return pass(`${label}: elutasítva (${tag})`);
+  if (kind === 'missing') return fail(`${label}: a tábla nem létezik — lefutott a migráció? (${tag})`);
+  if (kind === 'network') return fail(`${label}: a projekt nem érhető el (${tag})`);
+  fail(`${label}: váratlan hiba (${tag})`);
+}
+
+// Elutasítva, vagy üres eredmény (az RLS minden sort kiszűr).
 async function expectNoRows(label, q) {
   const { data, error } = await q;
-  if (error) return pass(`${label}: elutasítva (${error.code || error.message})`);
+  if (error) return report(label, error);
   if (Array.isArray(data) && data.length === 0) return pass(`${label}: üres`);
   fail(`${label}: ${Array.isArray(data) ? data.length + ' sor' : 'adat'} jött vissza`);
 }
-async function expectError(label, q) {
+async function expectError(label, q, extraOk = []) {
   const { error } = await q;
-  if (error) return pass(`${label}: elutasítva (${error.code || error.message})`);
+  if (error) return report(label, error, extraOk);
   fail(`${label}: sikerült, pedig nem szabadna`);
+}
+
+// Előbb: elérhető-e a projekt egyáltalán.
+try {
+  const r = await fetch(url + '/auth/v1/health', { headers: { apikey: key } });
+  if (!r.ok) { console.error(`A projekt nem válaszol rendesen: HTTP ${r.status}`); process.exit(2); }
+} catch (e) {
+  console.error('A projekt nem érhető el: ' + (e.cause?.message || e.message));
+  process.exit(2);
 }
 
 console.log('Bejelentkezés nélkül, anon kulccsal: ' + url);
@@ -56,14 +86,17 @@ for (const t of TABLES) {
   await expectNoRows(`delete ${t}`, sb.from(t).delete().not('created_at', 'is', null).select());
 }
 
-await expectError('private séma (allowed_emails)', sb.schema('private').from('allowed_emails').select('*'));
-await expectError('rpc hook_before_user_created', sb.rpc('hook_before_user_created', { event: {} }));
+// PGRST106: a séma nincs közzétéve a Data API-n.
+await expectError('private séma (allowed_emails)', sb.schema('private').from('allowed_emails').select('*'), ['PGRST106']);
+// PGRST202: a public sémában nincs ilyen függvény (a hook a private sémában van).
+await expectError('rpc hook_before_user_created', sb.rpc('hook_before_user_created', { event: {} }), ['PGRST202']);
 
 // Ismeretlen cím regisztrációja: az e-mail provider ki van kapcsolva, és az allowlist is elutasítja.
 const probe = `rls-check-${Date.now()}@example.invalid`;
 {
   const { data, error } = await sb.auth.signUp({ email: probe, password: crypto.randomUUID() });
-  if (error || !data?.user) pass(`regisztráció ismeretlen címmel: elutasítva (${error?.code || error?.message || 'nincs felhasználó'})`);
+  if (error && (error.status === 0 || /fetch/i.test(error.message))) fail(`regisztráció ismeretlen címmel: a projekt nem érhető el (${error.message})`);
+  else if (error || !data?.user) pass(`regisztráció ismeretlen címmel: elutasítva (${error?.code || error?.message || 'nincs felhasználó'})`);
   else fail('regisztráció ismeretlen címmel: létrejött egy felhasználó (' + probe + '), töröld a dashboardon');
 }
 
