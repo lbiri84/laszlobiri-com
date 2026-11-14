@@ -26,7 +26,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 // ---------------------------------------------------------------- ál-Supabase
 const HH = 'aaaaaaaa-0000-0000-0000-000000000000';
 const PARENT = 'a1a1a1a1-0000-0000-0000-000000000000';
-const db = { pupils: [], results: [], badges: [], devices: [], device_pupils: [], pairings: [] };
+const db = { pupils: [], results: [], badges: [], devices: [], device_pupils: [], pairings: [], reports: [] };
 const users = { [PARENT]: { id: PARENT, is_anonymous: false, email: 'szulo@example.invalid' } };
 const refresh = {};
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -88,6 +88,16 @@ function rest(method, table, q, body, sub) {
     if (method === 'PATCH') { const d = vis.find(x => x.user_id === id); if (d && body.last_seen_at) d.last_seen_at = body.last_seen_at; return { status: 204 }; }
     if (method === 'DELETE') { if (isParent(sub)) { db.devices = db.devices.filter(d => d.user_id !== id); db.device_pupils = db.device_pupils.filter(d => d.device_user_id !== id); } return { status: 204 }; }
   }
+  if (table === 'question_reports') {
+    if (method === 'POST') {
+      if (!body.pupil_id || !canPupil(sub, body.pupil_id)) return err(403, '42501', 'rls');
+      if (db.reports.some(r => r.id === body.id)) return err(409, '23505', 'question_reports_pkey');
+      db.reports.push({ ...body, status: 'new', recorded_by: sub, created_at: new Date().toISOString() }); return { status: 201, body: null };
+    }
+    if (!isParent(sub)) return { status: 200, body: method === 'GET' ? [] : null };
+    if (method === 'GET') return { status: 200, body: db.reports.filter(r => !q.get('status') || r.status === q.get('status').slice(3)).map(r => pick(r, sel)) };
+    if (method === 'PATCH') { const r = db.reports.find(x => x.id === inList(q, 'id')[0]); if (r) r.status = body.status; return { status: 204 }; }
+  }
   if (table === 'device_pupils') return { status: 200, body: db.device_pupils.filter(x => isParent(sub) || x.device_user_id === sub).map(x => pick(x, sel)) };
   if (table === 'rpc/create_pairing') {
     if (!isParent(sub) || !body.p_pupils.every(id => db.pupils.some(p => p.id === id))) return err(403, '42501', 'nincs jogosultság');
@@ -147,7 +157,7 @@ let failed = 0;
 const check = (ok, m) => { console.log((ok ? '  rendben  ' : '  HIBA     ') + m); if (!ok) failed++; };
 const browser = await chromium.launch();
 async function device({ parent }) {
-  const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 800 } });
+  const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 800 }, permissions: ['clipboard-read', 'clipboard-write'] });
   await ctx.route('https://fonts.googleapis.com/**', r => r.abort());
   await ctx.route('https://laszlobiri.com/**', async r => {
     const u = new URL(r.request().url());
@@ -309,6 +319,36 @@ try {
   await settle(T.page);
   const dev = db.devices[0].user_id;
   check(db.results.filter(r => r.pupil_id === mokus).length === 2 && db.results.some(r => r.recorded_by === dev), 'tablet: az offline kör visszatérő hálózatnál felment');
+
+  // Hibás feladat jelentése a tableten (a kör közben).
+  await T.page.waitForSelector('.whobar');
+  await T.page.click('[data-go="mondat"]');
+  await T.page.click('[data-go="report"]');
+  await T.page.waitForSelector('[data-report="bad_question"]');
+  await shot(T.page, 'jelentes');
+  await T.page.click('[data-report="bad_question"]');
+  await T.page.waitForSelector('text=Köszönjük! A szülő megnézi');
+  check(await T.page.isDisabled('[data-go="report"]'), 'jelentés: elküldve, ugyanaz a kérdés nem jelenthető újra');
+  await settle(T.page);
+  const rep = db.reports[0];
+  check(db.reports.length === 1 && rep.reason === 'bad_question' && rep.topic === 'mondat' && rep.recorded_by === dev && rep.choices.length >= 2 && rep.prompt.length > 0,
+    `jelentés: a szerveren a kérdés pillanatképével (${rep?.topic}: „${rep?.prompt}”, ${rep?.choices?.length} válasz)`);
+  check(!/[<>]/.test(rep.prompt + rep.body + rep.choices.join('') + rep.explain), 'jelentés: HTML nélkül, csak szöveg');
+  await T.page.click('[data-pick="0"]');
+  check(await T.page.isDisabled('[data-go="report"]'), 'jelentés: válasz után is jelentve marad');
+  await T.page.click('[data-go="home"]');
+
+  // A szülő látja, másolja (a gyerek neve nélkül), és lezárja.
+  await P.page.click('[data-go="who"]'); await P.page.click('[data-go="parent"]');
+  await P.page.waitForSelector('[data-rep]');
+  check((await P.page.textContent('.rep')).includes('Hibás a kérdés'), 'jelentés: a szülői nézetben megjelenik');
+  await P.page.click('[data-go="copyreports"]');
+  await P.page.waitForFunction(() => /vágólapon/.test(document.querySelector('.msg').textContent));
+  const clip = await P.page.evaluate(() => navigator.clipboard.readText());
+  check(clip.includes('Hibás a kérdés') && clip.includes('téma: mondat') && clip.includes('Kérdés:') && !clip.includes('Mókus'), 'jelentés: a másolt szöveg a javításhoz kell, a gyerek neve nincs benne');
+  await P.page.click(`[data-rep="${rep.id}"][data-repstatus="fixed"]`);
+  await P.page.waitForFunction(() => /Javítottként lezárva/.test(document.querySelector('.msg').textContent));
+  check(rep.status === 'fixed' && !(await P.page.$('[data-rep]')), 'jelentés: „Javítva” után lezárul és eltűnik a listából');
 
   // Kilépés a gyerek módból.
   await T.page.click('[data-go="kidexit"]');
