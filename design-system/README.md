@@ -98,6 +98,16 @@ A Supabase-kliens és a belépés közös kódja a design system mellett, a `lib
 </script>
 ```
 
+Minden oldal **csak belépve** használható (kivétel a `/belepes/` és az `/adatvedelem/`). Ehhez a `<head>` elejére, minden más elé:
+
+```html
+<style id="lb-gate">html{visibility:hidden}</style>
+<script>/* lb-gate */if(!/(?:^|;\s*)sb-[a-z0-9]+-auth-token(?:\.0)?=/.test(document.cookie))location.replace('https://laszlobiri.com/belepes/?next='+encodeURIComponent(location.href))</script>
+<script type="module" src="https://laszlobiri.com/lib/v1/gate.js"></script>
+```
+
+A kapu böngészőben működik: a fájlok továbbra is nyilvánosan letölthetők, az adatot az adatbázis RLS-e védi. Offline is beenged, ha a telefonon van munkamenet.
+
 Szabályok:
 
 - **Az útvonal és az exportált nevek publikus szerződés**, mint a tokeneké. Törő változásnál `lib/v2/` jön létre, és az aloldalakat egyenként kell átállítani.

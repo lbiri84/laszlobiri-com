@@ -115,7 +115,7 @@ Javaslat: **az eredmények csak hozzáfűzhető események**, a pontszámot, a s
 - `created_at`, `recorded_by` (FK → `auth.users`, on delete set null): a szülő vagy a gyerek mód eszközfiókja
 - Döntés: a mai helyi pontok **nem kerülnek át**, a két gyerek nulláról indul. Ezért nincs import sor, és a `results` csak valódi körökből és minijátékokból áll.
 - Index: (`pupil_id`, `created_at desc`).
-- Döntés: **csak a befejezett kör számít**. Ma a félbehagyott kör jó válaszai is pontot érnek (válaszonként ment); az új modellben a pont, a megválaszolt és a jó válaszok száma a `finish()`-ben, egyszerre íródik. Ez a kijelentkezett, helyi üzemmódra is vonatkozik, hogy a két mód ugyanúgy számoljon.
+- Döntés: **csak a befejezett kör számít**. Ma a félbehagyott kör jó válaszai is pontot érnek (válaszonként ment); az új modellben a pont, a megválaszolt és a jó válaszok száma a `finish()`-ben, egyszerre íródik. 
 
 **`public.pupil_badges`**: `pupil_id`, `badge_id` (check: `^[a-z0-9-]{1,32}$`), `earned_at`; PK: (`pupil_id`, `badge_id`). Csak beszúrás, `on conflict do nothing`.
 
@@ -247,6 +247,20 @@ Ismert korlátok:
 
 Döntés: **közös süti**. Ha a 0. fázis kísérlete valamelyik böngészőben elbukik, a tartalék a domainenkénti `localStorage` és aloldalanként egy kattintásos belépés; erről akkor külön döntünk.
 
+### Belépési kapu
+
+Döntés: az oldalakat csak engedélyezett, belépett felhasználó használhatja, a főoldalt is. Kivétel a `/belepes/` (enélkül nem lehetne belépni) és az `/adatvedelem/` (a tájékoztatónak elérhetőnek kell lennie).
+
+- **Ez böngészős kapu, nem hozzáférés-védelem.** A GitHub Pages minden fájlt bárkinek kiszolgál, és a repók is publikusak: a HTML és a JavaScript letölthető. Ami védett, az az adat (RLS). Valódi szerveroldali védelemhez más tárhely kellene (fizetős, vagy nameserver-váltással járna); ezt elvetettük.
+- `lib/v1/gate.js`, bekötés minden védett oldal `<head>`-jének elején:
+  1. `<style id="lb-gate">html{visibility:hidden}</style>`: semmi nem látszik, amíg a kapu nem dönt;
+  2. egy beágyazott sor, ami munkamenet-süti híján **rajzolás előtt** a belépőoldalra irányít (`?next=` a mostani cím);
+  3. a `gate.js` modul: ha van helyi munkamenet, megmutatja az oldalt; online állapotban a háttérben a szerverrel is ellenőriz (törölt fiók, visszavont munkamenet → kiléptetés).
+- **Offline**: a kapu nem kér hálózatot. Ha a böngésző offline, vagy a munkamenet 3 másodpercen belül nem áll elő (lejárt token, nincs hálózat), és van munkamenet-süti, az oldal megnyílik; csak a szerver egyértelmű elutasítása léptet ki. Hálózati hiba soha.
+- Kilépés bármelyik oldalon: a többi oldal előtérbe kerüléskor a belépőoldalra irányít.
+- Gyerek mód (3. fázis): a gyakorló oldalon a párosított eszközfiók számít belépésnek; a többi oldalon nem, ott a tablet a belépőoldalra kerül.
+- A főoldalon kész (`index.html`); az aloldalakon a 2. és 3. fázis első lépése, az `ebed.`-en egy külön, kis változtatás.
+
 ## 4. A közös kliens kód helye és bekötése
 
 Ebben a repóban, a `design-system/` mellett:
@@ -262,6 +276,7 @@ lib/
     outbox.js           IndexedDB kimenő sor: enqueue(op), flush(handlers), a két aloldal közös mintája
     device.js           gyerek mód: eszközfiók-kliens saját localStorage-dzsal, pair(code), unpair(), PIN-ellenőrzés
     auth-badge.js       <lb-auth> web component (belépés gomb / név + kilépés), csak tokenes CSS
+    gate.js             belépési kapu: belépés nélkül a belépőoldalra irányít, offline is működik
   build/README.md       a supabase.js újragenerálása (esbuild, rögzített verziók)
 belepes/index.html      központi belépőoldal
 adatvedelem/index.html  adatkezelési tájékoztató (GDPR)
@@ -326,7 +341,7 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 ### 2. fázis: bevásárlólista (`laszlobiri-com` migráció + `bevasarlo-lista`)
 - Migráció: `lists`, `items`, `item_history`, `bump_history`, Realtime publikáció, `pg_cron` takarítás. Tesztek.
 - Az `index.html` átállítása modulra. Az adatréteg két üzemmódja:
-  - **Kijelentkezve**: pontosan a mai működés (`localStorage`, link- és szöveges megosztás).
+  - **Kijelentkezve**: nincs (belépési kapu, lásd „Belépési kapu” alább).
   - **Belépve**: IndexedDB (`items`, `history`, `outbox`, `meta`), a UI a helyi adatból rajzol, minden módosítás azonnal helyben megjelenik és a kimenő sorba kerül.
 - A mai műveletek leképezése:
 
@@ -344,21 +359,21 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 
 - Szinkron indul: megnyitáskor, `online` eseménykor, `visibilitychange` eseménykor. Sorrend: token frissítése → kimenő sor sorrendben → delta-lekérés (`updated_at > utolsó szinkron`, a töröltekkel) → Realtime feliratkozás. iOS-en nincs Background Sync, ezért nem építünk rá.
 - Ütközés: mezőnként az utolsó szerverre érkező írás nyer; a pipálás és a szöveg külön frissül.
-- **Átállás**: első belépéskor, ha a `bevasarlo-lista.v1` nem üres: „Feltöltöd a telefonon lévő listát a közös listába?” Az `items` új UUID-t kap, a `history` a `count` értékkel megy át. A régi kulcs megmarad (nem töröljük), amíg a felhasználó ki nem jelentkezik vagy „Helyi lista törlése” nem lesz.
-- A „Lista küldése linkként” megmarad (nem belépett embernek is működik), de a menüben a közös lista lesz az elsődleges.
+- **Átállás**: döntés: a régi helyi adat **törlődik**, nem kerül fel. Az új verzió első indításkor törli a `bevasarlo-lista.v1` kulcsot, mindketten a közös, üres listával indultok.
+- A „Lista küldése linkként” megszűnik: a link csak belépett családtagnak nyílna meg, akik a közös listát amúgy is látják. A szöveges megosztás/másolás megmarad (pl. üzenetben elküldeni valakinek, aki nem használja az oldalt).
 - `sw.js` módosítás (lásd fent).
 - Kézi teszt: két telefon, az egyik repülő módban; mindkettő felveszi a „Tej”-et, pipál, töröl; visszakapcsolás után a két lista egyezik, és nincs dupla „Tej”.
 
 ### 3. fázis: gyakorló oldal (`laszlobiri-com` migráció + `gyakorlas`)
 - Migráció: `pupils`, `results`, `pupil_badges`, tesztek.
-- **Kijelentkezve**: a mai működés, egy helyi játékos (`gyakorlo.v1`).
+- **Kijelentkezve**: nincs (belépési kapu; a gyerek tableten a gyerek mód eszközfiókja számít belépésnek).
 - **Belépve**: a kezdőképernyőn „Ki gyakorol?” választó (becenév + ikon); a választott gyerek `id`-ja eszközönként `localStorage`-ban.
   - A mai `S` állapot gyerekenként a `results` és `pupil_badges` sorokból számolódik (`points` = a `points` összege, `rounds`, `perfect`, `best[topic]`, `played[topic]`, `days`/`lastDay` a dátumokból, `mgWins`/`wsWins` a `kind` alapján, `mgDone`/`mgN` a pontból). A `finish()` és a minijáték-győzelem egy-egy `results` sort ír; az új jelvény egy `pupil_badges` sort.
   - Az írás ugyanazzal a kimenő sorral történik (`lib/v1/outbox.js`), csak beszúrás, így offline gyakorlás is szinkronizálódik.
-- **Átállás**: nincs. A `gyakorlo.v1` helyi állapot érintetlen marad, és kijelentkezve továbbra is az látszik; belépve a gyerekprofilok nulláról indulnak. Belépéskor egy egyszeri, rövid tájékoztatás jelzi, hogy a régi pontok ezen az eszközön, kijelentkezve maradnak meg.
+- **Átállás**: nincs. Az új verzió első indításkor törli a `gyakorlo.v1` kulcsot; a gyerekprofilok nulláról indulnak.
 - Szülői nézet: gyerekenként az utolsó körök, témánkénti legjobb és átlag, jelvények; „Eszközök” lista és „Új eszköz” párosítás.
 - **Gyerek mód** (a 3. fázis második fele): migráció (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing`, `claim_pairing`, takarítás), `lib/v1/device.js`, a gyerek mód felülete, PIN, visszavonás, tesztek. Kézi teszt egy iPaden telepített appként: párosítás, offline gyakorlás, visszakapcsolás, visszavonás, és hogy a tableten a `bevasarlas.` oldal üres.
-- `sw.js` módosítás (lásd fent). A README „Nincs fiók, semmit nem küld sehová” mondata frissül: belépés nélkül ez igaz marad, belépve a szülő fiókjába ment.
+- `sw.js` módosítás (lásd fent). A README „Nincs fiók, semmit nem küld sehová” mondata frissül: az oldal csak belépve használható, és az eredmények a háztartáshoz mentődnek.
 
 ### 4. fázis: mentés, export, üzemeltetés
 - **Export az appban**: „Adataim letöltése” JSON-ban (lista, előzmények; szülőnek a gyerekprofilok, eredmények, jelvények). RLS alatt fut. A bevásárlólista JSON importot is kap.
@@ -376,9 +391,9 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 - **Szüneteltetés**: az ingyenes projekt egy hét tétlenség után szünetel (az adat megmarad, a dashboardon egy kattintással újraindul). A bevásárlólista napi használata valószínűleg megelőzi. Ha mégis előfordul, egy heti GitHub Actions kérés a publikus kulccsal életben tarthatja; ehhez titok nem kell, de előbb ellenőrizni kell, hogy a Supabase aktivitásnak számítja-e.
 - GDPR: tájékoztató (`/adatvedelem/`), Supabase DPA, gyerekprofil törlése kaszkádolva törli az eredményeket és jelvényeket, fiók törlése kérésre (admin SQL).
 
-### 5. fázis (később): `ebed.`
-A belépés gomb és a heti kijelölés közös mentése (`meal_picks`), ha igény lesz rá. Service worker nélkül, a `lib/v1` bekötésével.
-
+### 5. fázis: `ebed.`
+- **Most**: csak a belépési kapu (három sor a `<head>`-be, a `lib/v1/gate.js` a `laszlobiri.com`-ról). Az `update-menu.yml` közzétételén nem kell változtatni.
+- **Később**: a heti kijelölés közös mentése (`meal_picks`), ha igény lesz rá.
 ## Amit neked kell kézzel beállítanod
 
 ### Supabase
@@ -413,6 +428,8 @@ A 2. és 3. fázishoz a `bevasarlo-lista` és a `gyakorlas` repót írási jogga
 | gyorsjavaslatok | közösek |
 | félbehagyott kör | nem számít, csak a befejezett kör |
 | mai helyi gyakorló pontok | nem kerülnek át, a gyerekek nulláról indulnak |
+| használat belépés nélkül | nincs: belépési kapu a főoldalon és mind a három aloldalon; csak a `/belepes/` és az `/adatvedelem/` nyilvános |
+| régi helyi adatok (lista, pontok) | törlődnek, nem kerülnek fel |
 | csomag | ingyenes Supabase + helyi, titkosított mentő szkript |
 | gyerekek saját eszköze | gyerek mód: névtelen, párosított eszközfiók, csak gyakorlásra jogosult, PIN-nel lehet kilépni belőle |
 

@@ -28,7 +28,8 @@ const USER = { id: '11111111-1111-1111-1111-111111111111', aud: 'authenticated',
 const now = () => Math.floor(Date.now() / 1000);
 const session = () => ({
   access_token: `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: USER.id, role: 'authenticated', exp: now() + 3600, aud: 'authenticated', email: USER.email })}.sig`,
-  token_type: 'bearer', expires_in: 3600, expires_at: now() + 3600, refresh_token: 'refresh-test', user: USER,
+  // shortSession: azonnal lejáró access token (az offline kapu próbájához).
+  token_type: 'bearer', expires_in: globalThis.shortSession ? 5 : 3600, expires_at: now() + (globalThis.shortSession ? 5 : 3600), refresh_token: 'refresh-test', user: USER,
 });
 
 const seen = [];
@@ -52,7 +53,9 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/auth/v1/token') {
     let body = ''; for await (const c of req) body += c;
     const j = JSON.parse(body || '{}');
-    if (u.searchParams.get('grant_type') === 'pkce' && j.auth_code === 'test-code' && j.code_verifier) {
+    const ok = (u.searchParams.get('grant_type') === 'pkce' && j.auth_code === 'test-code' && j.code_verifier)
+      || (u.searchParams.get('grant_type') === 'refresh_token' && j.refresh_token === 'refresh-test');
+    if (ok) {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify(session()));
     }
@@ -87,11 +90,17 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
-page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+// A szimulált hálózatkiesés (offline kapu próba) várt konzolüzenetét nem számoljuk hibának.
+page.on('console', m => { if (m.type() === 'error' && !/ERR_INTERNET_DISCONNECTED/.test(m.text())) errors.push(m.text()); });
 
 try {
   // A célnak egy helyi "aloldalt" használunk: egy oldal az <lb-auth> jelvénnyel.
   const target = `${ORIGIN}/scripts/fixtures/aloldal.html`;
+
+  // Kapu: belépés nélkül a főoldal azonnal a belépőoldalra visz.
+  await page.goto(`${ORIGIN}/`);
+  await page.waitForURL(u => u.pathname === '/belepes/', { timeout: 10000 });
+  check(new URL(page.url()).searchParams.get('next') === `${ORIGIN}/`, 'kapu: belépés nélkül a főoldal a belépőoldalra irányít (next = főoldal)');
 
   await page.goto(`${ORIGIN}/belepes/?next=${encodeURIComponent(target)}`);
   await page.waitForSelector('#google:not([hidden])', { state: 'visible' });
@@ -119,6 +128,11 @@ try {
   await page.waitForSelector('#signedIn:not([hidden])');
   check((await page.textContent('#status')).includes('Teszt Szülő'), 'belépőoldal: "Be vagy lépve: Teszt Szülő."');
 
+  // Kapu: belépve a főoldal látszik.
+  await page.goto(`${ORIGIN}/`);
+  await page.waitForFunction(() => !document.getElementById('lb-gate') && getComputedStyle(document.documentElement).visibility === 'visible');
+  check(new URL(page.url()).pathname === '/', 'kapu: belépve a főoldal megjelenik');
+
   // Kilépés az aloldalon.
   await page.goto(target);
   await page.waitForFunction(() => document.querySelector('lb-auth')?.shadowRoot?.querySelector('button')?.textContent === 'Kilépés');
@@ -126,6 +140,25 @@ try {
   await page.waitForFunction(() => document.querySelector('lb-auth').shadowRoot.querySelector('button').textContent === 'Belépés');
   const left = (await page.context().cookies()).filter(c => /auth-token/.test(c.name));
   check(left.length === 0, 'kilépés után nincs munkamenet-süti');
+
+  // Kapu offline, lejárt access tokennel: nem léptet ki.
+  globalThis.shortSession = true;
+  await page.goto(`${ORIGIN}/belepes/?next=${encodeURIComponent(ORIGIN + '/')}`);
+  await page.click('#google');
+  await page.waitForURL(`${ORIGIN}/`, { timeout: 10000 });
+  await page.route('**/auth/v1/**', r => r.abort('internetdisconnected'));
+  await page.goto(`${ORIGIN}/`);
+  await page.waitForFunction(() => !document.getElementById('lb-gate'), null, { timeout: 10000 });
+  check(new URL(page.url()).pathname === '/', 'kapu: offline, lejárt tokennel is megnyílik a főoldal');
+  await page.unroute('**/auth/v1/**');
+  globalThis.shortSession = false;
+
+  // Kapu: kilépés a főoldalon a belépőoldalra visz.
+  await page.goto(`${ORIGIN}/`);
+  await page.waitForFunction(() => document.querySelector('lb-auth')?.shadowRoot?.querySelector('button')?.textContent === 'Kilépés');
+  await page.evaluate(() => document.querySelector('lb-auth').shadowRoot.querySelector('button').click());
+  await page.waitForURL(u => u.pathname === '/belepes/', { timeout: 10000 });
+  check(true, 'kapu: kilépés után a belépőoldalra irányít');
 
   // Nyitott átirányítás: idegen next a főoldalra esik vissza.
   const { safeNextResult } = await page.evaluate(async () => {
