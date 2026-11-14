@@ -1,68 +1,74 @@
 # Supabase: a laszlobiri oldalak közös backendje
 
-A terv: [`docs/backend-terv.md`](../docs/backend-terv.md). Ebben a mappában a séma (migrációk), a tesztek és a helyi beállítás van.
+Hogyan működik az egész: [`docs/backend-terv.md`](../docs/backend-terv.md). Ebben a mappában a séma (migrációk), a tesztek és a helyi beállítás van; lent az éles projekt kézi beállításai.
+
+Éles projekt: `eokwxkrcttsoxfflvuus` (Central EU, Frankfurt). A nyilvános adatai a `lib/v1/config.js`-ben vannak.
+
+## Fájlok
 
 | fájl | mi ez |
 | --- | --- |
-| `migrations/20261114120000_core.sql` | 1. fázis: `profiles`, `households`, `household_members`, `private.allowed_emails`, allowlist hook és trigger, RLS |
-| `migrations/20261114150000_lists.sql` | 2. fázis: `lists` (háztartásonként egy), `items` (soft delete, név szerinti egyediség), `item_history`, `bump_history()`, Realtime, napi takarítás (`pg_cron`) |
-| `migrations/20261114180000_practice.sql` | 3. fázis: `pupils`, `results`, `pupil_badges`, gyerek mód (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing()`, `claim_pairing()`), napi takarítás |
-| `migrations/20261114200000_pupil_theme.sql` | gyerekprofilonként választható színtéma (`pupils.theme`: `slate` / `rose`) |
-| `migrations/20261114210000_pupil_theme_self.sql` | a gyerek (a saját tabletjén is) maga választja a színét; a tablet csak a `theme`-et írhatja (`pupils_guard`) |
-| `migrations/20261114220000_question_reports.sql` | hibás feladat jelentése (`question_reports`): a gyerek / tablet beküldi, csak a szülő látja és zárja le |
-| `tests/005_question_reports.test.sql` | pgTAP tesztek a jelentésekhez |
-| `tests/004_pupil_theme.test.sql` | pgTAP tesztek: a téma beállítása és korlátai |
-| `tests/003_practice.test.sql` | pgTAP tesztek: gyerekprofilok, eredmények, párosítás, az eszköz jogai, visszavonás |
-| `tests/002_lists.test.sql` | pgTAP tesztek: megosztás, idegen lista, duplikátum, törlés/visszavonás, előzmény |
-| `tests/001_core_rls.test.sql` | pgTAP tesztek: allowlist, profil-trigger, ki mit lát és írhat |
+| `migrations/20261114120000_core.sql` | `profiles`, `households`, `household_members`, `private.allowed_emails`, allowlist hook és trigger, RLS |
+| `migrations/20261114150000_lists.sql` | bevásárlólista: `lists` (háztartásonként egy), `items` (soft delete, név szerinti egyediség), `item_history`, `bump_history()`, Realtime, napi takarítás |
+| `migrations/20261114180000_practice.sql` | gyakorló: `pupils`, `results`, `pupil_badges`, gyerek mód (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing()`, `claim_pairing()`), napi takarítás |
+| `migrations/20261114200000_pupil_theme.sql` | gyerekprofil színtémája (`pupils.theme`: `slate` / `rose`) |
+| `migrations/20261114210000_pupil_theme_self.sql` | a tablet a hozzá rendelt gyerek színét írhatja, mást nem (`pupils_guard`) |
+| `migrations/20261114220000_question_reports.sql` | hibás feladat jelentése (`question_reports`) |
 | `tests/000_helpers.sql` | teszt-segédfüggvények (lekérdezés egy adott felhasználóként) |
+| `tests/001_core_rls.test.sql` … `005_question_reports.test.sql` | pgTAP tesztek a fenti migrációkhoz |
 | `tests/stub/supabase-stub.sql` | csak a `scripts/test-db.sh`-hoz: a Supabase sémák utánzata sima Postgresen |
 | `seed.sql` | kitalált adatok a helyi fejlesztéshez |
 | `config.toml` | a Supabase CLI helyi beállítása (`supabase start`) |
 
 ## Tesztek
 
-Docker nélkül, egy ideiglenes helyi Postgresen (Postgres és `postgresql-16-pgtap` kell):
-
 ```bash
 npm run test:db
 ```
 
-Teljes Supabase-környezetben (Docker kell):
+Docker nélkül, egy ideiglenes helyi Postgresen (Postgres és `postgresql-16-pgtap` kell). Teljes Supabase-környezetben (Docker kell) ugyanezek a tesztek: `supabase start`, majd `supabase test db`.
 
 ```bash
-supabase start
+npm run test:smoke
 ```
+
+Böngészős próbák ál-Supabase szerverrel (Playwright kell; a `bevasarlo-lista` és a `gyakorlas` repó a `laszlobiri-com` mellett legyen).
 
 ```bash
-supabase test db
+npm run check:rls
 ```
 
-A belépőoldal böngészős füstpróbája, ál-Supabase szerverrel (Playwright kell):
+Az éles projekt ellenőrzése a nyilvános kulccsal (HTTPS-proxy mögött `NODE_USE_ENV_PROXY=1`). Minden sornak „rendben”-nek kell lennie.
 
-```bash
-node scripts/login-smoke.mjs
+## Új migráció élesítése
+
+1. A fájl tartalmát a dashboard SQL Editorában futtasd le (vagy `supabase link --project-ref eokwxkrcttsoxfflvuus`, majd `supabase db push`).
+2. `npm run check:rls`.
+3. Csak ezután élesedhet a kliens, amelyik az új táblát vagy oszlopot használja.
+
+## Új felhasználó
+
+Egy sor az `allowed_emails` táblába, a dashboard SQL Editorában (a címet ott írd be, ne fájlba):
+
+```sql
+insert into private.allowed_emails (email, household_id)
+select lower('UJ@PELDA.HU'), id from public.households where name = 'Család';
 ```
 
-## Éles beállítás, egyszer
+Ha valaki a felvétele előtt próbált belépni, a belépése elutasítva lett (fiók nem jött létre); a felvétel után újra be kell lépnie.
 
-A Supabase-projekt és a Google OAuth kliens beállítása a terv „Amit neked kell kézzel beállítanod” részében van. Utána:
+## Az éles projekt kézi beállításai (megtörtént; újrakezdéshez)
 
-1. **Migráció.** Vagy a Supabase CLI-vel a gépedről (a `<ref>` a projekt azonosítója a dashboard címéből):
+### Supabase
 
-   ```bash
-   supabase link --project-ref <ref>
-   ```
-
-   ```bash
-   supabase db push
-   ```
-
-   vagy a migrációs fájl tartalmát bemásolod a dashboard SQL Editorába, és lefuttatod.
-
-2. **Allowlist hook.** Dashboard → Authentication → Hooks → *Before User Created* → Postgres → séma `private`, függvény `hook_before_user_created`.
-
-3. **Háztartás és engedélyezett címek.** A dashboard SQL Editorában (a címeket ott írd be, ne fájlba):
+1. Projekt, régió Central EU (Frankfurt); az adatbázis-jelszó a jelszókezelőben.
+2. Project Settings → API: a Project URL és a publishable (anon) kulcs a `lib/v1/config.js`-be. A service role / secret kulcs sehova nem kerül.
+3. Authentication → Sign In / Providers: **Google** be (Client ID + Secret a Google Cloudból); **Email** ki; **Allow anonymous sign-ins** be (a gyerek módhoz).
+4. Authentication → Rate Limits: az anonymous sign-ins korlátja alacsony (pl. óránként 10).
+5. Authentication → URL Configuration: Site URL `https://laszlobiri.com`; Redirect URLs: `https://laszlobiri.com/belepes/**`.
+6. A migrációk sorban (lásd fent). Ha a `pg_cron` nincs bekapcsolva, előbb Database → Extensions → `pg_cron`.
+7. Authentication → Hooks → *Before User Created* → Postgres, séma `private`, függvény `hook_before_user_created`.
+8. Háztartás és a két szülő címe:
 
    ```sql
    with h as (insert into public.households (name) values ('Család') returning id)
@@ -71,23 +77,9 @@ A Supabase-projekt és a Google OAuth kliens beállítása a terv „Amit neked 
    from h, (values ('TE@PELDA.HU', 'admin'), ('FELESEGED@PELDA.HU', 'user')) as e(email, app_role);
    ```
 
-   Az első belépéskor a trigger létrehozza a profilt és a háztartás-tagságot. Ha valaki már belépett, mielőtt a címe felkerült volna: a belépése elutasítva lett, fiók nem jött létre, a felvétel után egyszerűen újra be kell lépnie.
+9. Organization settings → DPA elfogadása.
 
-4. **Nyilvános adatok a kliensbe.** A `lib/v1/config.js`-be a Project URL és a publishable (anon) kulcs.
+### Google Cloud
 
-5. **Ellenőrzés anon kulccsal.**
-
-   ```bash
-   npm run check:rls
-   ```
-
-   Minden sornak „rendben”-nek kell lennie. Dashboard → Advisors → Security Advisor: ne legyen figyelmeztetés.
-
-## Új felhasználó később
-
-Egy sor az `allowed_emails` táblába, ugyanazzal a `household_id`-val:
-
-```sql
-insert into private.allowed_emails (email, household_id)
-select lower('UJ@PELDA.HU'), id from public.households where name = 'Család';
-```
+1. Projekt „laszlobiri”; OAuth consent screen (Google Auth Platform): External, név „laszlobiri”; Branding: főoldal `https://laszlobiri.com`, adatvédelem `https://laszlobiri.com/adatvedelem/`, authorized domain `laszlobiri.com` (és ha elfogadja, `eokwxkrcttsoxfflvuus.supabase.co`; a `supabase.co` a Public Suffix List része, önmagában nem fogadja el). Logó nélkül; scope csak `openid`, `email`, `profile`; Production (vagy Testing, a két szülő tesztfelhasználóként).
+2. Clients → Web application: JavaScript origin `https://laszlobiri.com`; redirect URI `https://eokwxkrcttsoxfflvuus.supabase.co/auth/v1/callback`. A Client ID és Secret csak a Supabase Google providerébe kerül.

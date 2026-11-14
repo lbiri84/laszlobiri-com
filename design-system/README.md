@@ -69,7 +69,7 @@ Tokeneket a `tokens.css` adja (CSS változók, `--bg`, `--fg`, `--accent`…). A
 
 ### Új oldal vagy app bekötése (központi tokenek)
 
-A `tokens.css` egyetlen példánya itt van, és közzé van téve: **`https://laszlobiri.com/design-system/tokens.css`**. Az aloldalak (Interfood, Bevásárlólista és minden új) ezt töltik be, **nem tartanak helyi másolatot**:
+A `tokens.css` egyetlen példánya itt van, és közzé van téve: **`https://laszlobiri.com/design-system/tokens.css`**. Az aloldalak (Interfood, Bevásárlólista, Gyakorló és minden új) ezt töltik be, **nem tartanak helyi másolatot**:
 
 ```html
 <link rel="preconnect" href="https://laszlobiri.com">
@@ -80,14 +80,14 @@ Szabályok:
 
 - **Ne másold** a `tokens.css`-t az aloldal repójába, és ne vedd fel a közzétételi (Actions) másoló lépésbe. Token módosítása csak itt, a `tokens.json`-ban történik, utána a `tokens.css` újragenerálása, és az aloldalak maguktól megkapják.
 - **Az útvonal publikus szerződés**: a `design-system/tokens.css` nem nevezhető át és nem mozdítható el, és a változónevek (`--bg`, `--fg`, `--accent`…) nem törölhetők vagy nevezhetők át, mert az aloldalak ezektől függenek. Törő változtatásnál előbb új, verziózott útvonal (pl. `design-system/v2/tokens.css`) jöjjön létre, és az aloldalakat egyenként át kell állítani.
-- **Ami helyben marad az aloldalon**: az `icon.svg` és az alkalmazás ikonjai (a manifest és az `apple-touch-icon` miatt), a téma kiválasztása (`data-theme`) és az oldal saját CSS-e.
+- **Ami helyben marad az aloldalon**: az `icon.svg` és az alkalmazás ikonjai (a manifest és az `apple-touch-icon` miatt), a téma kiválasztása (`data-theme`) és az oldal saját CSS-e. Egy aloldal saját témát is adhat a tokenek felülírásával a saját CSS-ében (pl. a gyakorló `data-theme="rose"`), a kontraszt-szabályok betartásával; a jel (`mark-*`) színei ilyenkor sem változnak.
 - **PWA-nál** (service worker): a `tokens.css` ne kerüljön az előre mentett (`ASSETS`) listába, mert az install lépés CORS nélkül elbukhat. A hálózat-először kezelő az első betöltéskor lementi, így offline is elérhető.
 - **Függés**: ha a `laszlobiri.com` nem érhető el, az aloldal stílus nélkül jelenik meg. A főoldal elérhetősége ezért mindhárom oldalra hat.
 - **Ellenőrzés új oldalnál**: megnyitás után a böngésző hálózati paneljén a `tokens.css` kérésnek 200-assal kell visszajönnie.
 
 ### Belépés és közös adat (lib/v1)
 
-A Supabase-kliens és a belépés közös kódja a design system mellett, a `lib/v1/` mappában van, és ugyanúgy a `laszlobiri.com` címről töltődik be, mint a `tokens.css`. A terv: `docs/backend-terv.md`; az adatbázis: `supabase/README.md`.
+A Supabase-kliens és a belépés közös kódja a design system mellett, a `lib/v1/` mappában van, és ugyanúgy a `laszlobiri.com` címről töltődik be, mint a `tokens.css`. Hogyan működik: `docs/backend-terv.md`; az adatbázis: `supabase/README.md`.
 
 ```html
 <script type="module" src="https://laszlobiri.com/lib/v1/auth-badge.js"></script>
@@ -106,7 +106,7 @@ Minden oldal **csak belépve** használható (kivétel a `/belepes/` és az `/ad
 <script type="module" src="https://laszlobiri.com/lib/v1/gate.js"></script>
 ```
 
-A kapu böngészőben működik: a fájlok továbbra is nyilvánosan letölthetők, az adatot az adatbázis RLS-e védi. Offline is beenged, ha a telefonon van munkamenet.
+A kapu böngészőben működik: a fájlok továbbra is nyilvánosan letölthetők, az adatot az adatbázis RLS-e védi. Offline is beenged, ha a telefonon van munkamenet. A gyakorló oldal saját változatot használ, ami a párosított gyerek tabletet és a `#parositas` oldalt is átengedi (lásd a gyakorlas repót).
 
 Szabályok:
 
@@ -114,7 +114,7 @@ Szabályok:
 - **Ne másold** a `lib/v1`-et az aloldal repójába, és ne tölts be Supabase-t közvetlenül CDN-ről. A `lib/v1/supabase.js` generált, rögzített verziójú csomag (`npm run build:lib`), kézzel nem szerkesztjük.
 - **Kulcs**: a `lib/v1/config.js`-ben csak a projekt URL és a nyilvános (anon / publishable) kulcs lehet. A service role / secret kulcs soha nem kerül kliensbe vagy repóba.
 - **Belépés**: minden oldal a központi `https://laszlobiri.com/belepes/?next=…` oldalra küld (`signIn()`). A munkamenet `.laszlobiri.com` domainű sütiben él, így egy belépés mindenhol érvényes, és a kilépés is mindenhol kiléptet.
-- **Amíg a `config.js` üres**, az `<lb-auth>` nem jelenik meg, és az `isConfigured` hamis: az aloldalnak ilyenkor a mai, helyi módban kell működnie.
+- **Ha a `config.js` üres** (pl. egy új, még be nem kötött Supabase-projektnél), az `isConfigured` hamis: az `<lb-auth>` nem jelenik meg, és a kapu nem ellenőriz.
 - **Felhasználói szöveg** (másik felhasználó által beírt név, tétel) csak `textContent`-tel vagy `esc()`-pel kerülhet a DOM-ba.
 - **Offline mentés**: `lib/v1/outbox.js` (kimenő sor localStorage-ban, sorrendben küld, hálózati hibánál megtartja). Lásd a bevásárlólista és a gyakorló oldal használatát.
 - **Gyerek mód**: `lib/v1/device.js` (névtelen, párosított eszközfiók saját tárolóval, PIN). Csak a gyakorló oldal használja; ott a kapu a párosított tabletet is beengedi.
