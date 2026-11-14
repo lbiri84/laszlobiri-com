@@ -41,7 +41,13 @@ npm run check:rls
 
 Az éles projekt ellenőrzése a nyilvános kulccsal (HTTPS-proxy mögött `NODE_USE_ENV_PROXY=1`). Minden sornak „rendben”-nek kell lennie.
 
-## Új migráció élesítése (automatikus)
+## Új migráció élesítése
+
+**Jelenleg kézi**: a munkafolyamat titkai még nincsenek beállítva, ezért a migrációt a dashboard SQL Editorában kell lefuttatni, a `laszlobiri-com` élesítése előtt vagy után, de mindenképp az aloldal élesítése előtt. A munkafolyamat addig minden migrációs élesítésnél lefut, és a „Titkok ellenőrzése” lépésnél ártalmatlanul elbukik (az adatbázishoz nem nyúl).
+
+**Átállás automatikusra**: a két titok beállítása (lent), majd egy kézi indítás, a „repair” mezőben az összes eddig kézzel lefuttatott migráció verziójával (jelenleg: `20261114120000 20261114150000 20261114180000 20261114200000 20261114210000 20261114220000 20261114230000`), „dry_run” bejelölve. Ha a napló szerint nincs hátralévő migráció, kész.
+
+### Automatikus mód
 
 A `.github/workflows/supabase-migrate.yml` munkafolyamat a `main` ágra kerülő új `supabase/migrations/*.sql` fájlokat magától lefuttatja az éles projekten (`supabase db push`, Supabase CLI 2.121.0). Csak az még nem alkalmazott migrációk futnak; a nyilvántartás a `supabase_migrations.schema_migrations` táblában van.
 

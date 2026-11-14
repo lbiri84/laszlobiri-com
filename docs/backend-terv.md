@@ -124,7 +124,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 
 - Commit **szerzője**: Laszlo Biri `<lbiri84@users.noreply.github.com>`; **committere**: Claude `<noreply@anthropic.com>`. A környezet a commitokat a Claude kulcsával SSH-val aláírja, és a GitHub ezt csak `noreply@anthropic.com` committerrel fogadja el („Verified”). Valódi e-mail cím nem kerül commitba. (2026-11-14 előtti commitoknál a committer is a noreply cím volt, ezért azok aláíratlannak látszanak; nem írjuk át őket.)
 - Munkaág: `claude/funny-turing-bphs2l` minden repóban. Élesítés: helyi merge commit a `main`-re, ugyanezzel a szerző–committer párossal (nem a GitHub-on készült merge, mert az a fiók elsődleges címét írhatja be).
-- Sorrend: a `laszlobiri-com` élesítése (vele a migráció: a `supabase-migrate` munkafolyamat magától lefuttatja), `npm run check:rls`, végül az aloldal. A migrációt kézzel nem kell futtatni.
+- Sorrend: migráció, `laszlobiri-com`, `npm run check:rls`, végül az aloldal. A migrációt **jelenleg kézzel** kell futtatni a Supabase SQL Editorban; a `supabase-migrate` munkafolyamat (GitHub Actions) akkor veszi át, ha a két titkát beállítjuk és egy „repair” futással megjelöljük a kézzel lefuttatottakat (lásd `supabase/README.md`).
 - Minden változás előtt: `npm run test:db`, `npm run test:smoke`; élesítés után `npm run check:rls`.
 
 ## Tesztek (`laszlobiri-com`)
@@ -143,4 +143,5 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 4. **Szüneteltetés figyelése**: az ingyenes projekt egy hét tétlenség után szünetel. Ha előfordul, egy heti kérés a publikus kulccsal életben tarthatja (előbb ellenőrizni, hogy aktivitásnak számít-e).
 5. **Dashboardon ellenőrizendő** (kívülről nem látszik): Database → Publications → `supabase_realtime` tartalmazza a `lists` és `items` táblát; Database → Cron Jobs alatt ott a `laszlobiri-items-purge` és a `laszlobiri-devices-cleanup`. Ha valamelyik hiányzik, a `pg_cron` nem volt bekapcsolva a migrációkor: bekapcsolás után a megfelelő migráció végét újra kell futtatni.
 6. **Kézi próbák**, amik még nincsenek meg: bevásárlólista két telefonon (szinkron, offline, azonos tétel, gyorsjavaslatok); gyakorló (két profil, tablet párosítása telepített appban, offline kör a tableten, színválasztás a tableten).
-7. **Opcionális**: PIN a szülői nézethez szülői belépés mellett is (ha a gyerek a szülő telefonján játszik); a gyakorló feladatai külön adatfájlokba az első nagyobb tananyag-bővítésnél.
+7. **Automatikus migráció bekapcsolása**: a `SUPABASE_ACCESS_TOKEN` és `SUPABASE_DB_PASSWORD` titok a GitHubon, majd egy „repair” futás (`supabase/README.md`).
+8. **Opcionális**: PIN a szülői nézethez szülői belépés mellett is (ha a gyerek a szülő telefonján játszik); a gyakorló feladatai külön adatfájlokba az első nagyobb tananyag-bővítésnél.
