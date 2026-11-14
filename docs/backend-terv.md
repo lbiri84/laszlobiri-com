@@ -25,7 +25,7 @@ Mindhárom aloldal egyetlen `index.html`, build nélkül, inline `<script>`-tel.
 | `tokens.css` útvonala és a változónevek érintetlenek | A közös kód külön mappába kerül (`lib/v1/`), a `design-system/` mappához nem nyúlunk. |
 | csak a publikus kulcs és a projekt URL kerül kliensbe | A konfiguráció egyetlen fájlban (`lib/v1/config.js`) van. A service role / secret kulcs egyik repóban, Actions secretben vagy kliensben sem szerepel. |
 | gyerekekről csak becenév és eredmény | `pupils`: becenév és ikonkód. `results` és `pupil_badges`: számok, téma- és jelvénykódok, szabad szöveg nélkül. A gyereknek nincs fiókja: a saját tabletje egy névtelen, csak a gyakorlásra jogosult eszközfiókkal működik (gyerek mód). |
-| a bevásárlólista offline is működik | IndexedDB-ben a lista helyi példánya és egy kimenő sor (outbox). Visszatérő hálózatnál a sor kiürül, utána delta-lekérés és Realtime. A service worker a Supabase-kéréseket nem érinti. |
+| a bevásárlólista offline is működik | A lista helyi példánya és egy kimenő sor (outbox) a telefonon (localStorage). Visszatérő hálózatnál a sor kiürül, utána a lista újra lekérődik, és Realtime jelzi a másik telefon változásait. A service worker a Supabase-kéréseket nem érinti. |
 
 ## 1. Adatmodell
 
@@ -273,7 +273,7 @@ lib/
     supabase.js         előre buildelt, rögzített verziójú ESM csomag (@supabase/supabase-js + @supabase/ssr)
     client.js           egyetlen kliens példány, közös süti-beállításokkal
     auth.js             getUser(), signIn(next), signOut(), onAuthChange(cb)
-    outbox.js           IndexedDB kimenő sor: enqueue(op), flush(handlers), a két aloldal közös mintája
+    outbox.js           kimenő sor (localStorage): enqueue(op), flush(handle), a két aloldal közös mintája
     device.js           gyerek mód: eszközfiók-kliens saját localStorage-dzsal, pair(code), unpair(), PIN-ellenőrzés
     auth-badge.js       <lb-auth> web component (belépés gomb / név + kilépés), csak tokenes CSS
     gate.js             belépési kapu: belépés nélkül a belépőoldalra irányít, offline is működik
@@ -342,7 +342,7 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 - Migráció: `lists`, `items`, `item_history`, `bump_history`, Realtime publikáció, `pg_cron` takarítás. Tesztek.
 - Az `index.html` átállítása modulra. Az adatréteg két üzemmódja:
   - **Kijelentkezve**: nincs (belépési kapu, lásd „Belépési kapu” alább).
-  - **Belépve**: IndexedDB (`items`, `history`, `outbox`, `meta`), a UI a helyi adatból rajzol, minden módosítás azonnal helyben megjelenik és a kimenő sorba kerül.
+  - **Belépve**: helyi másolat (`bevasarlo-lista.v2`) és kimenő sor (`bevasarlo-lista.outbox.v1`) localStorage-ban; a UI a helyi adatból rajzol, minden módosítás azonnal helyben megjelenik és a kimenő sorba kerül.
 - A mai műveletek leképezése:
 
   | mai művelet | új művelet |
@@ -355,14 +355,20 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
   | „Kipipáltak törlése” | `update deleted_at` szűrővel (`list_id`, `done = true`) |
   | „Mind visszaállítása” | `update done=false` szűrővel |
   | „Teljes lista törlése” | `update deleted_at` szűrővel (`list_id`) |
-  | `storage` esemény (más fül) | `BroadcastChannel` + Realtime |
+  | `storage` esemény (más fül) | `storage` esemény + Realtime |
 
-- Szinkron indul: megnyitáskor, `online` eseménykor, `visibilitychange` eseménykor. Sorrend: token frissítése → kimenő sor sorrendben → delta-lekérés (`updated_at > utolsó szinkron`, a töröltekkel) → Realtime feliratkozás. iOS-en nincs Background Sync, ezért nem építünk rá.
+- Szinkron indul: megnyitáskor, `online` eseménykor, `visibilitychange` eseménykor. Sorrend: kimenő sor sorrendben → a teljes élő lista és az előzmény lekérése, rá a még el nem küldött műveletek → Realtime feliratkozás (egy változásra újabb lekérés). iOS-en nincs Background Sync, ezért nem építünk rá.
 - Ütközés: mezőnként az utolsó szerverre érkező írás nyer; a pipálás és a szöveg külön frissül.
 - **Átállás**: döntés: a régi helyi adat **törlődik**, nem kerül fel. Az új verzió első indításkor törli a `bevasarlo-lista.v1` kulcsot, mindketten a közös, üres listával indultok.
 - A „Lista küldése linkként” megszűnik: a link csak belépett családtagnak nyílna meg, akik a közös listát amúgy is látják. A szöveges megosztás/másolás megmarad (pl. üzenetben elküldeni valakinek, aki nem használja az oldalt).
 - `sw.js` módosítás (lásd fent).
 - Kézi teszt: két telefon, az egyik repülő módban; mindkettő felveszi a „Tej”-et, pipál, töröl; visszakapcsolás után a két lista egyezik, és nincs dupla „Tej”.
+- **Állapot: a kód kész, élesítésre vár.**
+  - `supabase/migrations/20261114150000_lists.sql` + `supabase/tests/002_lists.test.sql` (41 pgTAP teszt);
+  - `lib/v1/outbox.js`; a bevasarlo-lista `index.html`, `sw.js` (`bevasarlo-v17`), README;
+  - `scripts/list-sync-smoke.mjs`: két „telefon” ál-PostgREST szerverrel, 20 ellenőrzés (szinkron mindkét irányban, offline felvétel, azonos tétel két telefonról egyszer, törlés/visszavonás, közös javaslatok, XSS, a régi helyi lista törlése);
+  - `scripts/rls-check.mjs` az új táblákkal és a `bump_history`-val.
+  - Eltérések a tervtől, egyszerűsítésként: IndexedDB helyett localStorage (a lista kicsi, a szinkron API egyszerűbb, a régi kód is ezt használta); delta-lekérés helyett minden szinkronnál a teljes élő lista (pár száz sor, és nem maradhat ki későn véglegesített változás); BroadcastChannel helyett a `storage` esemény.
 
 ### 3. fázis: gyakorló oldal (`laszlobiri-com` migráció + `gyakorlas`)
 - Migráció: `pupils`, `results`, `pupil_badges`, tesztek.

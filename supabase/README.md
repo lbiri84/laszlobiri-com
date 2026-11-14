@@ -5,6 +5,8 @@ A terv: [`docs/backend-terv.md`](../docs/backend-terv.md). Ebben a mappában a s
 | fájl | mi ez |
 | --- | --- |
 | `migrations/20261114120000_core.sql` | 1. fázis: `profiles`, `households`, `household_members`, `private.allowed_emails`, allowlist hook és trigger, RLS |
+| `migrations/20261114150000_lists.sql` | 2. fázis: `lists` (háztartásonként egy), `items` (soft delete, név szerinti egyediség), `item_history`, `bump_history()`, Realtime, napi takarítás (`pg_cron`) |
+| `tests/002_lists.test.sql` | pgTAP tesztek: megosztás, idegen lista, duplikátum, törlés/visszavonás, előzmény |
 | `tests/001_core_rls.test.sql` | pgTAP tesztek: allowlist, profil-trigger, ki mit lát és írhat |
 | `tests/000_helpers.sql` | teszt-segédfüggvények (lekérdezés egy adott felhasználóként) |
 | `tests/stub/supabase-stub.sql` | csak a `scripts/test-db.sh`-hoz: a Supabase sémák utánzata sima Postgresen |

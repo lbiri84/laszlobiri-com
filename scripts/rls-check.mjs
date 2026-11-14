@@ -29,7 +29,11 @@ if (/service_role|sb_secret_/.test(key) || (() => {
 const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
 // Minden public tábla, amit a migrációk létrehoznak. Új táblánál ide is fel kell venni.
-const TABLES = ['profiles', 'households', 'household_members'];
+// A második érték egy létező oszlop a módosítás-próbához (PostgREST előbb az oszlopot ellenőrzi).
+const TABLES = {
+  profiles: 'display_name', households: 'name', household_members: 'role',
+  lists: 'name', items: 'name', item_history: 'name',
+};
 
 let failed = 0;
 const pass = msg => console.log('  rendben  ' + msg);
@@ -82,12 +86,15 @@ try {
 
 console.log('Bejelentkezés nélkül, anon kulccsal: ' + url);
 
-for (const t of TABLES) {
+for (const [t, col] of Object.entries(TABLES)) {
   await expectNoRows(`select ${t}`, sb.from(t).select('*').limit(5));
   await expectError(`insert ${t}`, sb.from(t).insert({}));
-  await expectNoRows(`update ${t}`, sb.from(t).update({ created_at: new Date().toISOString() }).not('created_at', 'is', null).select());
-  await expectNoRows(`delete ${t}`, sb.from(t).delete().not('created_at', 'is', null).select());
+  await expectNoRows(`update ${t}`, sb.from(t).update({ [col]: 'rls-check' }).not(col, 'is', null).select());
+  await expectNoRows(`delete ${t}`, sb.from(t).delete().not(col, 'is', null).select());
 }
+await expectError('rpc bump_history', sb.rpc('bump_history', {
+  p_household: '00000000-0000-0000-0000-000000000000', p_name_key: 'x', p_name: 'x', p_cat: 'egyeb',
+}));
 
 // PGRST106: a séma nincs közzétéve a Data API-n.
 await expectError('private séma (allowed_emails)', sb.schema('private').from('allowed_emails').select('*'), ['PGRST106']);
