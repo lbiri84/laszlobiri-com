@@ -7,6 +7,8 @@ A terv: [`docs/backend-terv.md`](../docs/backend-terv.md). Ebben a mappában a s
 | `migrations/20261114120000_core.sql` | 1. fázis: `profiles`, `households`, `household_members`, `private.allowed_emails`, allowlist hook és trigger, RLS |
 | `migrations/20261114150000_lists.sql` | 2. fázis: `lists` (háztartásonként egy), `items` (soft delete, név szerinti egyediség), `item_history`, `bump_history()`, Realtime, napi takarítás (`pg_cron`) |
 | `migrations/20261114180000_practice.sql` | 3. fázis: `pupils`, `results`, `pupil_badges`, gyerek mód (`devices`, `device_pupils`, `private.device_pairings`, `create_pairing()`, `claim_pairing()`), napi takarítás |
+| `migrations/20261114200000_pupil_theme.sql` | gyerekprofilonként választható színtéma (`pupils.theme`: `slate` / `rose`) |
+| `tests/004_pupil_theme.test.sql` | pgTAP tesztek: a téma beállítása és korlátai |
 | `tests/003_practice.test.sql` | pgTAP tesztek: gyerekprofilok, eredmények, párosítás, az eszköz jogai, visszavonás |
 | `tests/002_lists.test.sql` | pgTAP tesztek: megosztás, idegen lista, duplikátum, törlés/visszavonás, előzmény |
 | `tests/001_core_rls.test.sql` | pgTAP tesztek: allowlist, profil-trigger, ki mit lát és írhat |

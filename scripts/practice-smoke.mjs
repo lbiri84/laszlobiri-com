@@ -55,7 +55,12 @@ function rest(method, table, q, body, sub) {
     if (method === 'POST') {
       if (!isParent(sub)) return err(403, '42501', 'rls');
       if (db.pupils.some(p => p.nickname.trim().toLowerCase() === body.nickname.trim().toLowerCase())) return err(409, '23505', 'pupils_household_nickname');
-      db.pupils.push({ ...body, created_at: new Date().toISOString() }); return { status: 201, body: null };
+      db.pupils.push({ theme: 'slate', ...body, created_at: new Date().toISOString() }); return { status: 201, body: null };
+    }
+    if (method === 'PATCH') {
+      const id = inList(q, 'id')[0], p = db.pupils.find(x => x.id === id);
+      if (isParent(sub) && p) { if (!['slate', 'rose'].includes(body.theme)) return err(400, '23514', 'theme'); p.theme = body.theme; }
+      return { status: 204 };
     }
     if (method === 'DELETE') {
       if (!isParent(sub)) return { status: 204 };
@@ -201,9 +206,24 @@ try {
   check((await P.page.$$('[data-pupil]')).length === 2, '„Ki gyakorol?”: két gyerek');
   await shot(P.page, 'ki-gyakorol');
   const mokus = db.pupils.find(p => p.nickname === 'Mókus').id;
+  const bgOf = page => page.evaluate(() => [document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor]);
+
+  // Színtéma: Mókus rózsaszín (a szülői nézetben), Süni marad palakék.
+  await P.page.click('[data-go="parent"]');
+  await P.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="rose"]`);
+  await P.page.waitForFunction(() => /színe: Rózsaszín/.test(document.querySelector('.msg').textContent));
+  check(db.pupils.find(p => p.id === mokus).theme === 'rose', 'téma: a szülő Mókust rózsaszínre állítja (szerveren)');
+  check((await bgOf(P.page))[0] === 'slate', 'téma: a szülői nézet marad palakék');
+  await P.page.click('[data-go="who"]');
+  await P.page.waitForSelector('[data-pupil]');
+  check((await bgOf(P.page))[0] === 'slate', 'téma: a „Ki gyakorol?” marad palakék');
   await P.page.click(`[data-pupil="${mokus}"]`);
   await P.page.waitForSelector('.whobar');
   check((await P.page.textContent('.whobar')).includes('Mókus'), 'kezdőképernyő: Mókus gyakorol');
+  const [th, bg] = await bgOf(P.page);
+  check(th === 'rose' && bg === 'rgb(38, 29, 27)', `téma: Mókus kezdőképernyője rózsaszín (${th}, ${bg})`);
+  check(await P.page.evaluate(() => document.querySelector('meta[name=theme-color]').content) === '#261d1b', 'téma: a böngésző sávszíne is igazodik');
+  await shot(P.page, 'rozsaszin-kezdo');
 
   await playRound(P.page);
   await settle(P.page);
@@ -256,6 +276,9 @@ try {
   check(!(await T.page.$('[data-go="parent"]')), 'tablet: nincs szülői nézet');
   check((await T.page.evaluate(() => document.cookie)).indexOf('auth-token') < 0, 'tablet: az eszközfiók nem a közös sütiben van');
   check(T.page.url().indexOf('#parositas') < 0, 'tablet: a párosítás után a kezdőképernyőre ugrik');
+  check((await bgOf(T.page))[0] === 'rose', 'téma: Mókus tabletje rózsaszín');
+  await T.page.reload(); await visible(T.page);
+  check(await T.page.evaluate(() => document.documentElement.dataset.theme) === 'rose', 'téma: újratöltéskor rögtön rózsaszín (nincs villanás)');
   await shot(T.page, 'tablet-kezdo');
 
   // Tablet offline kör.
