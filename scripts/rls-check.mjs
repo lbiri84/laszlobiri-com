@@ -4,6 +4,7 @@
 // és nem írható, a private séma nem érhető el, és ismeretlen cím nem regisztrál.
 //
 // Futtatás:  npm run check:rls
+// (HTTPS-proxy mögött: NODE_USE_ENV_PROXY=1 npm run check:rls, Node 22.21+.)
 // A projekt adatait a lib/v1/config.js-ből veszi, vagy a SUPABASE_URL és
 // SUPABASE_ANON_KEY környezeti változóból. Service kulcs nem kell, és ne is add meg.
 //
@@ -92,12 +93,17 @@ await expectError('private séma (allowed_emails)', sb.schema('private').from('a
 await expectError('rpc hook_before_user_created', sb.rpc('hook_before_user_created', { event: {} }), ['PGRST202']);
 
 // Ismeretlen cím regisztrációja: az e-mail provider ki van kapcsolva, és az allowlist is elutasítja.
-const probe = `rls-check-${Date.now()}@example.invalid`;
+// example.com: foglalt tartomány, valódi postafiók nincs mögötte.
+const probe = `rls-check-${Date.now()}@example.com`;
 {
   const { data, error } = await sb.auth.signUp({ email: probe, password: crypto.randomUUID() });
-  if (error && (error.status === 0 || /fetch/i.test(error.message))) fail(`regisztráció ismeretlen címmel: a projekt nem érhető el (${error.message})`);
-  else if (error || !data?.user) pass(`regisztráció ismeretlen címmel: elutasítva (${error?.code || error?.message || 'nincs felhasználó'})`);
-  else fail('regisztráció ismeretlen címmel: létrejött egy felhasználó (' + probe + '), töröld a dashboardon');
+  const tag = error ? `${error.code || error.status}: ${error.message}` : '';
+  if (!error && data?.user) fail('regisztráció ismeretlen címmel: létrejött egy felhasználó (' + probe + '), töröld a dashboardon');
+  else if (!error) fail('regisztráció ismeretlen címmel: nem jött hiba, de felhasználó sem; ellenőrizd a dashboardon');
+  else if (['email_provider_disabled', 'signup_disabled'].includes(error.code)) pass(`regisztráció e-maillel: az e-mail provider ki van kapcsolva (${tag})`);
+  else if (/nincs engedélyezve|hook/i.test(error.message)) pass(`regisztráció e-maillel: az allowlist elutasította (${tag})`);
+  else if (error.status === 0 || /fetch/i.test(error.message)) fail(`regisztráció: a projekt nem érhető el (${tag})`);
+  else fail(`regisztráció: nem egyértelmű elutasítás, ellenőrizd az e-mail providert (${tag})`);
 }
 
 console.log(failed ? `\n${failed} ellenőrzés elbukott.` : '\nMinden ellenőrzés rendben.');

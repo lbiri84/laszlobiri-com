@@ -279,7 +279,7 @@ Szabályok (a `tokens.css` mintájára, bekerülnek a design system README-be):
 - Közzétett cím: `https://laszlobiri.com/lib/v1/…`. **Az útvonal és az exportált függvénynevek publikus szerződés.** Törő változásnál `lib/v2/` jön létre.
 - Az aloldalak nem tartanak helyi másolatot, és CDN-t sem használnak közvetlenül.
 - Ez a repó ágból, Jekyll-lel települ: a `lib/`, `belepes/`, `adatvedelem/` mappa változtatás nélkül kimegy. A `supabase/`, `scripts/` és `docs/` mappát egy `_config.yml` `exclude` sorral kihagyjuk a közzétételből (titok egyikben sincs, de a webre nem tartoznak).
-- Kereszt-domain modulbetöltés: a `<script type="module">` CORS-t igényel. A GitHub Pages `Access-Control-Allow-Origin: *` fejlécet küld; ezt az első bekötésnél a böngésző hálózati paneljén ellenőrizzük (ebből a munkamenetből nem tudtam lekérni).
+- Kereszt-domain modulbetöltés: a `<script type="module">` CORS-t igényel. **Ellenőrizve (2026-11-14):** a `laszlobiri.com` válasza `access-control-allow-origin: *`, tehát az aloldalak betölthetik a `lib/v1` modulokat.
 - Az `interfood-menu` közzétételén nem kell változtatni, mert a `lib/v1` a `laszlobiri.com`-ról jön, nem a saját `_site`-jából.
 
 Bekötés egy aloldalon (a mai `<head>` mellé):
@@ -321,7 +321,7 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
   - `belepes/`, `adatvedelem/` (a kapcsolati cím még kitöltendő), `_config.yml`;
   - `scripts/rls-check.mjs` (anon kulccsal, éles projekten futtatandó), `scripts/login-smoke.mjs` (böngészős füstpróba ál-Supabase szerverrel, 16 ellenőrzés).
   - Eltérés a tervtől: az allowlist `text` oszlop `lower()`-rel, nem `citext` (üres `search_path` mellett a `citext` összehasonlítás kis- és nagybetű-érzékeny maradt). A trigger második rétegként akkor is elutasít, ha a hook nincs bekötve.
-  - Valódi Supabase-en még nem futott: a migráció, a hook eseményformátuma (`is_anonymous`) és a `.laszlobiri.com` süti a projekt létrehozása után ellenőrizendő.
+  - A Supabase-projekt elkészült (`eokwxkrcttsoxfflvuus`, a nyilvános adatok a `lib/v1/config.js`-ben). Valódi Supabase-en még nem futott: a migráció, a hook eseményformátuma (`is_anonymous`) és a `.laszlobiri.com` süti a projekt létrehozása után ellenőrizendő.
 
 ### 2. fázis: bevásárlólista (`laszlobiri-com` migráció + `bevasarlo-lista`)
 - Migráció: `lists`, `items`, `item_history`, `bump_history`, Realtime publikáció, `pg_cron` takarítás. Tesztek.
