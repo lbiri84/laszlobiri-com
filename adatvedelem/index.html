@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="hu" data-theme="slate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Milyen adatot tárolnak a laszlobiri oldalak, és miért.">
+<meta name="theme-color" content="#293c4b">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://eokwxkrcttsoxfflvuus.supabase.co wss://eokwxkrcttsoxfflvuus.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Adatkezelés · laszlobiri</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="/design-system/tokens.css">
+<style>
+  /* A laszlobiri design system alapján (design-system/README.md). */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12);
+    max-width: 720px; min-height: 100vh; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--fg); font-family: var(--font-sans);
+    font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased;
+  }
+  .mk .f{fill:var(--mark-filler)}.mk .l{fill:var(--mark-l)}.mk .b{fill:var(--mark-b)}.mk .lr{stroke:var(--mark-l)}.mk .br{stroke:var(--mark-ring)}
+  .mk circle[stroke-width] { fill: none; }
+  header.page { margin: clamp(8px, 4vw, 40px) 0 var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); align-items: flex-start; }
+  header.page a { display: block; }
+  .mk { width: 96px; height: auto; display: block; }
+  h1 { font-size: clamp(36px, 8vw, 44px); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  h2 { font-size: 20px; line-height: 28px; font-weight: 600; margin: var(--space-8) 0 var(--space-2); }
+  p, li { color: var(--fg-muted); }
+  p { margin: 0 0 var(--space-4); max-width: 62ch; }
+  a { color: var(--accent-text); }
+  main { flex: 1; }
+  footer { margin-top: var(--space-12); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--fg-muted); }
+  footer a { color: var(--fg-muted); }
+  @media (max-width: 640px) { body { padding-left: var(--space-4); padding-right: var(--space-4); } }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <a href="/" aria-label="laszlobiri főoldal"><svg class="mk" viewBox="0 0 81 53" role="img" aria-label="laszlobiri jel"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)"><circle class="f" cx="47.5" cy="5.5" r="4"/><circle class="f" cx="33.5" cy="19.5" r="4"/><circle class="f" cx="47.5" cy="33.5" r="4"/><circle class="f" cx="33.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="5.5" r="4"/><circle class="l" cx="5.5" cy="19.5" r="4"/><circle class="l" cx="5.5" cy="33.5" r="4"/><circle class="l" cx="5.5" cy="47.5" r="4"/><circle class="l" cx="5.5" cy="61.5" r="4"/><circle class="l" cx="5.5" cy="75.5" r="4"/><circle class="l" cx="19.5" cy="75.5" r="4"/><circle class="l" cx="33.5" cy="75.5" r="4"/><circle class="l" cx="47.5" cy="75.5" r="4"/><circle class="b" cx="19.5" cy="5.5" r="4"/><circle class="b" cx="19.5" cy="19.5" r="4"/><circle class="b" cx="19.5" cy="33.5" r="4"/><circle class="b" cx="19.5" cy="47.5" r="4"/><circle class="b" cx="19.5" cy="61.5" r="4"/><circle class="b" cx="33.5" cy="5.5" r="4"/><circle class="b" cx="33.5" cy="33.5" r="4"/><circle class="b" cx="47.5" cy="19.5" r="4"/><circle class="lr" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle class="br" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/></g></g></svg></a>
+  <h1>Adatkezelés</h1>
+</header>
+
+<main>
+  <p>A laszlobiri.com és az aloldalai (ebed., bevasarlas., gyakorlas.) egy család saját alkalmazásai. Belépni csak előre engedélyezett címmel lehet. Ez az oldal leírja, mit tárolunk, hol és meddig.</p>
+
+  <h2>Ki kezeli az adatot</h2>
+  <p>Biri László, magánszemélyként, a család saját használatára. Kapcsolat: <a href="mailto:biri.laszlo84@gmail.com">biri.laszlo84@gmail.com</a>.</p>
+
+  <h2>Belépés nélkül</h2>
+  <p>Az oldalak belépés nélkül is működnek. Ilyenkor minden adat (a bevásárlólista, a gyakorló pontjai) csak a készülék böngészőjében marad, és nem kerül sehova.</p>
+
+  <h2>Belépéssel</h2>
+  <ul>
+    <li><strong>Fiók</strong>: a Google-fiók neve, e-mail címe és profilképének címe, amit a Google a belépéskor átad. Más Google-adathoz az oldal nem fér hozzá.</li>
+    <li><strong>Bevásárlólista</strong>: a tételek, a mennyiségek, a kategóriák, és hogy ki írta fel őket.</li>
+    <li><strong>Gyakorló</strong>: a gyerekeknek csak becenevük és egy ikonjuk van, fiókjuk nincs. Tároljuk a befejezett körök eredményét (téma, pontszám, időpont) és a megszerzett jelvényeket. Születési dátumot, fényképet, iskolát vagy más személyes adatot nem.</li>
+    <li><strong>Gyerek mód</strong>: a gyerekek eszköze egy név és e-mail nélküli eszközfiókkal működik, amely csak a gyakorláshoz fér hozzá.</li>
+    <li><strong>Naplók</strong>: a tárhely- és adatbázis-szolgáltatók biztonsági okból rövid ideig naplózzák a kérések IP-címét.</li>
+  </ul>
+
+  <h2>Hol</h2>
+  <ul>
+    <li>Adatbázis és belépés: Supabase, az Európai Unióban (Frankfurt).</li>
+    <li>Belépés: Google (csak a bejelentkezés idejére).</li>
+    <li>Az oldalak tárhelye: GitHub Pages. Itt csak az oldalak fájljai vannak, adat nem.</li>
+  </ul>
+
+  <h2>Meddig</h2>
+  <p>Amíg a fiók vagy a gyerekprofil létezik. A törölt bevásárlólista-tételek 30 nap után véglegesen törlődnek. Egy gyerekprofil törlése az összes eredményét és jelvényét is törli.</p>
+
+  <h2>Jogaid</h2>
+  <p>Kérheted az adataid kiadását, javítását és törlését a fenti kapcsolati címen. Panaszt a Nemzeti Adatvédelmi és Információszabadság Hatóságnál (NAIH) tehetsz.</p>
+</main>
+
+<footer><a href="/">laszlobiri.com</a><a href="/adatvedelem/">Adatkezelés</a></footer>
+
+</body>
+</html>

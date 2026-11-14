@@ -85,6 +85,29 @@ Szabályok:
 - **Függés**: ha a `laszlobiri.com` nem érhető el, az aloldal stílus nélkül jelenik meg. A főoldal elérhetősége ezért mindhárom oldalra hat.
 - **Ellenőrzés új oldalnál**: megnyitás után a böngésző hálózati paneljén a `tokens.css` kérésnek 200-assal kell visszajönnie.
 
+### Belépés és közös adat (lib/v1)
+
+A Supabase-kliens és a belépés közös kódja a design system mellett, a `lib/v1/` mappában van, és ugyanúgy a `laszlobiri.com` címről töltődik be, mint a `tokens.css`. A terv: `docs/backend-terv.md`; az adatbázis: `supabase/README.md`.
+
+```html
+<script type="module" src="https://laszlobiri.com/lib/v1/auth-badge.js"></script>
+<lb-auth></lb-auth>
+<script type="module">
+  import { getUser, onAuthChange, signIn, signOut } from 'https://laszlobiri.com/lib/v1/auth.js';
+  import { supabase, isConfigured } from 'https://laszlobiri.com/lib/v1/client.js';
+</script>
+```
+
+Szabályok:
+
+- **Az útvonal és az exportált nevek publikus szerződés**, mint a tokeneké. Törő változásnál `lib/v2/` jön létre, és az aloldalakat egyenként kell átállítani.
+- **Ne másold** a `lib/v1`-et az aloldal repójába, és ne tölts be Supabase-t közvetlenül CDN-ről. A `lib/v1/supabase.js` generált, rögzített verziójú csomag (`npm run build:lib`), kézzel nem szerkesztjük.
+- **Kulcs**: a `lib/v1/config.js`-ben csak a projekt URL és a nyilvános (anon / publishable) kulcs lehet. A service role / secret kulcs soha nem kerül kliensbe vagy repóba.
+- **Belépés**: minden oldal a központi `https://laszlobiri.com/belepes/?next=…` oldalra küld (`signIn()`). A munkamenet `.laszlobiri.com` domainű sütiben él, így egy belépés mindenhol érvényes, és a kilépés is mindenhol kiléptet.
+- **Amíg a `config.js` üres**, az `<lb-auth>` nem jelenik meg, és az `isConfigured` hamis: az aloldalnak ilyenkor a mai, helyi módban kell működnie.
+- **Felhasználói szöveg** (másik felhasználó által beírt név, tétel) csak `textContent`-tel vagy `esc()`-pel kerülhet a DOM-ba.
+- **PWA-nál** a service worker a `*.supabase.co` és a `laszlobiri.com/belepes/` kéréseket nem kezeli (a fetch kezelő `respondWith` nélkül visszatér), és a `lib/v1/*` nem kerül az `ASSETS` listába, ugyanazért, amiért a `tokens.css` sem.
+
 ## Fájlok ebben a repóban
 
 - `tokens.json`: a tokenek forrása. `tokens.css`: ebből generált CSS-változók (`data-theme="slate"` vagy `"light"`); az aloldalak ezt a fájlt töltik be a `laszlobiri.com` címről (lásd fent).

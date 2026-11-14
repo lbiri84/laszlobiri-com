@@ -1,0 +1,10 @@
+# GitHub Pages (Jekyll) közzététel: ezek a fájlok és mappák nem kerülnek ki a webre.
+# Titok egyikben sincs, de nem a látogatóknak szólnak.
+exclude:
+  - docs/
+  - supabase/
+  - scripts/
+  - lib/build/
+  - node_modules/
+  - package.json
+  - package-lock.json

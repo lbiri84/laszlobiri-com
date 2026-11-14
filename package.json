@@ -1,0 +1,16 @@
+{
+  "name": "laszlobiri-com",
+  "private": true,
+  "type": "module",
+  "description": "A laszlobiri.com főoldal, a design system és a közös Supabase-kliens (lib/v1).",
+  "scripts": {
+    "build:lib": "esbuild lib/build/entry.js --bundle --format=esm --target=es2020 --minify --legal-comments=eof \"--banner:js=/* Generált fájl (lib/build/entry.js, npm run build:lib). @supabase/supabase-js 2.118.0 és @supabase/ssr 0.12.7, MIT licenc. Ne szerkeszd kézzel. */\" --outfile=lib/v1/supabase.js",
+    "test:db": "scripts/test-db.sh",
+    "check:rls": "node scripts/rls-check.mjs"
+  },
+  "devDependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
+    "esbuild": "0.28.2"
+  }
+}
