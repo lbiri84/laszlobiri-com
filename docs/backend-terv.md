@@ -1,6 +1,6 @@
 # Backend terv: Supabase a laszlobiri oldalak mögé
 
-Állapot: **terv, még nincs kód**. A nyitott kérdések a dokumentum végén vannak.
+Állapot: **terv, még nincs kód**. A döntések és a még nyitott kérdések a dokumentum végén vannak.
 
 ## Kiindulás
 
@@ -45,7 +45,7 @@ private.allowed_emails   (nem érhető el az API-ból)
 ### Közös táblák
 
 **`private.allowed_emails`**: az allowlist a `private` sémában, amit a Data API nem tesz közzé.
-- `email` (citext, PK), `household_id` (uuid, null lehet), `household_role` (`parent` | `member`), `app_role` (`admin` | `user`), `note`, `created_at`.
+- `email` (citext, PK), `household_id` (uuid, null lehet), `household_role` (`parent`), `app_role` (`admin` | `user`), `note`, `created_at`.
 
 **`public.profiles`**
 - `id` (uuid, PK, FK → `auth.users.id`, on delete cascade), `display_name` (1–40), `app_role` (`admin` | `user`), `created_at`.
@@ -54,9 +54,8 @@ private.allowed_emails   (nem érhető el az API-ból)
 **`public.households`**: `id`, `name`, `created_at`. Az elsőt kézzel hozod létre (seed).
 
 **`public.household_members`**: itt él a szerepkör.
-- `household_id`, `user_id`, `role` (`parent` | `member`), `created_at`; PK: (`household_id`, `user_id`).
-- `parent`: mindent lát és szerkeszt. Te és a feleséged.
-- `member`: csak a bevásárlólistát látja és szerkeszti (pl. nagyszülő). Gyerekadathoz nem fér hozzá.
+- `household_id`, `user_id`, `role`, `created_at`; PK: (`household_id`, `user_id`).
+- Döntés: rajtatok kívül nincs más felhasználó, ezért egyetlen szerep van, a `parent` (check constraint). Te és a feleséged mindent láttok és szerkesztetek. Az oszlop azért marad, hogy egy későbbi szűkebb szerep (pl. csak bevásárlólista) egy migrációval felvehető legyen.
 
 ### Bevásárlólista
 
@@ -71,7 +70,7 @@ A `cat` mező a kódban rögzített 9 kategória egyike: `zold`, `tej`, `hus`, `
 
 **`public.lists`**
 - `id` (uuid), `household_id`, `name` (1–60), `created_by`, `created_at`, `updated_at`, `deleted_at`.
-- Az app ma egy listát ismer. Háztartásonként egy „Közös lista” jön létre, a UI ezt nyitja meg. A tábla azért külön, hogy később több lista is lehessen (pl. „Drogéria”) séma-változás nélkül.
+- Döntés: háztartásonként **egy** közös lista. Egyedi index a `household_id`-n (élő sorokra), a lista a háztartással együtt jön létre (trigger), a UI ezt nyitja meg. A tábla azért külön, hogy később több lista is lehessen; akkor csak az egyedi indexet kell elvenni.
 
 **`public.items`**: a mai tétel mezői, szerveroldali kiegészítéssel.
 - `id` (uuid, **a kliens generálja** `crypto.randomUUID()`-dal, hogy offline is létrehozható legyen; a mai `uid()` azonosítók importkor új UUID-t kapnak)
@@ -85,7 +84,7 @@ A `cat` mező a kódban rögzített 9 kategória egyike: `zold`, `tej`, `hus`, `
 - A soft delete a delta-szinkron miatt kell (a másik eszköz így tudja meg a törlést), és a mai visszavonás is erre épül: a visszavonás egyszerűen törli a `deleted_at` értékét. 30 nap után `pg_cron` véglegesen törli.
 - Index: (`list_id`, `updated_at`).
 
-**`public.item_history`**: a gyorsjavaslatok, háztartásonként közösen (a „gyakran vett” így mindkettőtöknél ugyanaz).
+**`public.item_history`**: a gyorsjavaslatok. Döntés: háztartásonként közös, a „gyakran vett” mindkettőtöknél ugyanaz.
 - `household_id`, `name_key`, `name`, `cat`, `count`, `last_used`; PK: (`household_id`, `name_key`).
 - Növelés egy `security invoker` függvénnyel: `bump_history(household_id, name, cat)` (`insert … on conflict do update set count = count + 1`), így két eszköz egyidejű növelése sem veszik el. A 200-as felső korlát marad: a kliens csak az első 200-at kéri le.
 
@@ -105,6 +104,7 @@ Javaslat: **az eredmények csak hozzáfűzhető események**, a pontszámot, a s
 
 **`public.pupils`**
 - `id`, `household_id`, `nickname` (1–20, egyedi háztartáson belül), `avatar` (check: rögzített kódlista, pl. `fox`, `owl`), `created_at`.
+- Két gyerekprofil lesz. A profilokat a szülő a gyakorló oldalon hozza létre; a becenevek **nem kerülnek a repóba** (sem seedbe, sem tesztbe, sem dokumentációba), mert a repók publikusak. A tesztek kitalált beceneveket használnak.
 
 **`public.results`**: egy sor egy befejezett kör vagy minijáték.
 - `id` (uuid, kliens generálja: az offline beküldés ismétlése így nem duplikál)
@@ -115,7 +115,7 @@ Javaslat: **az eredmények csak hozzáfűzhető események**, a pontszámot, a s
 - `created_at`, `recorded_by` (FK → profiles)
 - Az `import` sor a mai helyi állapot átvitelére szolgál: a `points`, `answered`, `correct` és `rounds` összesítőt egy sorban hozza át. A témánkénti `best`/`played` és a napi sorozat nem jön át; a már megszerzett jelvények viszont igen (lásd lent).
 - Index: (`pupil_id`, `created_at desc`).
-- A félbehagyott kör ma is számít a `points`/`answered` értékbe (válaszonként ment). Az új modellben csak a befejezett kör kerül be. Ez apró viselkedésváltozás.
+- Döntés: **csak a befejezett kör számít**. Ma a félbehagyott kör jó válaszai is pontot érnek (válaszonként ment); az új modellben a pont, a megválaszolt és a jó válaszok száma a `finish()`-ben, egyszerre íródik. Ez a kijelentkezett, helyi üzemmódra is vonatkozik, hogy a két mód ugyanúgy számoljon.
 
 **`public.pupil_badges`**: `pupil_id`, `badge_id` (check: `^[a-z0-9-]{1,32}$`), `earned_at`; PK: (`pupil_id`, `badge_id`). Csak beszúrás, `on conflict do nothing`.
 
@@ -140,7 +140,7 @@ A policykban `(select auth.uid())` formát használunk. A `security definer` fü
 | `profiles` | saját sor, és akikkel közös háztartásban vagy | nincs (trigger) | csak saját sor, **csak** `display_name` (oszlopszintű `grant`) | nincs (kaszkád) |
 | `households` | tag | nincs | `parent`: csak `name` | nincs |
 | `household_members` | a saját háztartásaid tagjai | nincs (allowlist + trigger, vagy admin SQL) | nincs | nincs |
-| `lists` | `is_member` | `is_member`, `created_by = auth.uid()` | `is_member` régi és új `household_id`-ra | soft delete; valódi delete csak `parent` |
+| `lists` | `is_member` | nincs (trigger hozza létre) | `is_member`, csak `name` | nincs |
 | `items` | `is_member(list_household(list_id))` | ugyanaz, `created_by = auth.uid()` | ugyanaz using és with check ágon | soft delete updatettel |
 | `item_history` | `is_member` | `is_member` | `is_member` | `parent` |
 | `pupils` | `is_parent` | `is_parent` | `is_parent`, csak `nickname`, `avatar` | `is_parent` (kaszkád az eredményekre) |
@@ -155,11 +155,13 @@ További szabályok:
 
 ### Tesztelés
 
-**a) SQL tesztek (pgTAP, `supabase test db`)**, helyi Supabase-en vagy külön teszt-projekten. Két háztartás, három felhasználó (A szülő, A tag, B szülő), `set local role authenticated; set local request.jwt.claims = '{"sub": "…"}'` mellett:
+**a) SQL tesztek (pgTAP, `supabase test db`)**, helyi Supabase-en vagy külön teszt-projekten. Két háztartás, három felhasználó (A1 és A2 az A háztartásban, B a B-ben), `set local role authenticated; set local request.jwt.claims = '{"sub": "…"}'` mellett:
 - B semmit nem lát A listáiból, tételeiből, előzményeiből, gyerekeiből, eredményeiből, jelvényeiből;
 - B update/delete A soraira 0 sort érint, insert A listájába RLS-hibát ad, `bump_history` A háztartására hibát ad;
 - egy A-beli tétel nem mozgatható át B listájába (with check);
-- az A tag nem lát `pupils`/`results`/`pupil_badges` sort;
+- A1 és A2 ugyanazt látja (a megosztás működik), A1 írása A2-nél Realtime eseményként megjelenik;
+- háztartáshoz nem tartozó, de allowlistes felhasználó semmit nem lát;
+- háztartásonként nem jöhet létre második lista;
 - senki nem írhatja a saját `app_role`-ját és a `household_members` táblát;
 - `anon` szereppel minden tábla 0 sort vagy jogosultsági hibát ad.
 
@@ -202,7 +204,7 @@ Ismert korlátok:
 - iOS-en a kezdőképernyőre tett PWA-nak (mindkét aloldalon van `apple-mobile-web-app-capable`) külön tárolója van, ott egyszer külön be kell lépni. Az OAuth-visszairányítást telepített PWA-ban a 0. fázisban ki kell próbálni.
 - Két aloldal egyszerre frissítheti a tokent. Ezt a refresh token reuse interval (alapból 10 s) kezeli.
 
-Tartalék, ha a közös süti nem elfogadható: domainenkénti `localStorage`, és aloldalanként egy kattintás a belépés.
+Döntés: **közös süti**. Ha a 0. fázis kísérlete valamelyik böngészőben elbukik, a tartalék a domainenkénti `localStorage` és aloldalanként egy kattintásos belépés; erről akkor külön döntünk.
 
 ## 4. A közös kliens kód helye és bekötése
 
@@ -224,8 +226,11 @@ adatvedelem/index.html  adatkezelési tájékoztató (GDPR)
 supabase/
   migrations/           séma, RLS, hook, trigger, bump_history, pg_cron
   tests/                pgTAP
-  seed.sql              háztartás + allowlist minta (valódi e-mail nélkül)
-scripts/rls-check.mjs   fekete dobozos anon-teszt
+  seed.sql              háztartás + allowlist minta (valódi e-mail és becenév nélkül)
+scripts/
+  rls-check.mjs         fekete dobozos anon-teszt
+  backup.sh             helyi, titkosított teljes mentés (lásd 4. fázis)
+  restore-local.sh      visszaállítás próba helyi Supabase-be
 ```
 
 Szabályok (a `tokens.css` mintájára, bekerülnek a design system README-be):
@@ -295,7 +300,7 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 - Kézi teszt: két telefon, az egyik repülő módban; mindkettő felveszi a „Tej”-et, pipál, töröl; visszakapcsolás után a két lista egyezik, és nincs dupla „Tej”.
 
 ### 3. fázis: gyakorló oldal (`laszlobiri-com` migráció + `gyakorlas`)
-- Migráció: `pupils`, `results`, `pupil_badges`, tesztek a `parent`/`member` különbségre.
+- Migráció: `pupils`, `results`, `pupil_badges`, tesztek.
 - **Kijelentkezve**: a mai működés, egy helyi játékos (`gyakorlo.v1`).
 - **Belépve**: a kezdőképernyőn „Ki gyakorol?” választó (becenév + ikon); a választott gyerek `id`-ja eszközönként `localStorage`-ban.
   - A mai `S` állapot gyerekenként a `results` és `pupil_badges` sorokból számolódik (`points` = a `points` összege, `rounds`, `perfect`, `best[topic]`, `played[topic]`, `days`/`lastDay` a dátumokból, `mgWins`/`wsWins` a `kind` alapján, `mgDone`/`mgN` a pontból). A `finish()` és a minijáték-győzelem egy-egy `results` sort ír; az új jelvény egy `pupil_badges` sort.
@@ -306,8 +311,18 @@ A mai `sw.js` minden GET kérést hálózat-először kezel, és **mindent** elm
 
 ### 4. fázis: mentés, export, üzemeltetés
 - **Export az appban**: „Adataim letöltése” JSON-ban (lista, előzmények; szülőnek a gyerekprofilok, eredmények, jelvények). RLS alatt fut. A bevásárlólista JSON importot is kap.
-- **Teljes mentés**: havonta helyben `supabase db dump` a saját gépeden, titkosított helyre. GitHub Actionsbe nem tesszük (publikus repók, jelszó és artefaktumok kezelése).
-- Ingyenes csomag: nincs letölthető napi mentés, és egy hét tétlenség után a projekt szünetel. A bevásárlólista napi használata ezt valószínűleg megelőzi.
+- **Teljes mentés: `scripts/backup.sh`** (döntés: ingyenes csomag, tehát a mentés a mi dolgunk). A saját gépeden fut, nem GitHub Actionsben: a repók publikusak, és ott a jelszót és a mentett adatot is kezelni kellene.
+  - Bemenet: a kapcsolati cím a `SUPABASE_DB_URL` környezeti változóból (a dashboard „Connect” → **Session pooler** címe, mert az ingyenes csomag közvetlen címe csak IPv6). A jelszó soha nem kerül fájlba vagy repóba; a szkript bekéri, ha nincs megadva.
+  - Mit ment, a Supabase CLI-vel (`supabase db dump`, Docker kell hozzá):
+    1. `schema.sql`: a `public` és a `private` séma szerkezete, policyk, függvények, triggerek;
+    2. `data.sql`: a `public` és a `private` séma adatai (`--data-only`);
+    3. `auth.sql`: csak az `auth.users` és az `auth.identities` adatai. Erre azért van szükség, mert a `profiles.id` ezekre hivatkozik; nélkülük a visszaállított adat gazdátlan lenne.
+  - Utána: a három fájl egy `tar` csomagba, majd `age` jelszavas titkosítással egy `.tar.age` fájlba, `~/laszlobiri-backup/ÉÉÉÉ-HH-NN.tar.age` néven. A titkosítatlan fájlok törlődnek. A régiekből a legutóbbi 12 marad meg.
+  - Ellenőrzés a szkript végén: egyik fájl sem üres, a `data.sql`-ben szerepelnek a `public.items` és a `public.results` sorai, és a titkosított fájl visszafejthető.
+  - Gyakoriság: havonta, és minden migráció előtt. Emlékeztetőt érdemes a naptárba tenni.
+  - A mentés helye legyen egy második helyen is (pl. külső lemez vagy Proton Drive), mert a gép elvesztése a mentést is viszi.
+- **Visszaállítás próba: `scripts/restore-local.sh`**: a titkosított fájlt visszafejti, és egy helyi `supabase start` példányba tölti. Negyedévente érdemes lefuttatni: csak a visszaállított mentés bizonyítja, hogy a mentés jó.
+- **Szüneteltetés**: az ingyenes projekt egy hét tétlenség után szünetel (az adat megmarad, a dashboardon egy kattintással újraindul). A bevásárlólista napi használata valószínűleg megelőzi. Ha mégis előfordul, egy heti GitHub Actions kérés a publikus kulccsal életben tarthatja; ehhez titok nem kell, de előbb ellenőrizni kell, hogy a Supabase aktivitásnak számítja-e.
 - GDPR: tájékoztató (`/adatvedelem/`), Supabase DPA, gyerekprofil törlése kaszkádolva törli az eredményeket és jelvényeket, fiók törlése kérésre (admin SQL).
 
 ### 5. fázis (később): `ebed.`
@@ -322,8 +337,9 @@ A belépés gomb és a heti kijelölés közös mentése (`meal_picks`), ha igé
 4. Authentication → URL Configuration: Site URL `https://laszlobiri.com`; Redirect URLs: `https://laszlobiri.com/belepes/**`, fejlesztéshez `http://localhost:8000/**`.
 5. Authentication → Hooks: „Before User Created” → `private.hook_before_user_created` (a migráció után).
 6. A migrációk futtatása (Supabase CLI a gépedről, vagy SQL szerkesztő), utána a seed: háztartás, a te és a feleséged címe az allowlistbe (`parent`, te `admin`). Valódi e-mail cím nem kerül repóba.
-7. Organization settings → DPA elfogadása.
-8. Opcionális: második projekt tesztelésre, vagy Docker a helyi `supabase start`-hoz.
+7. A mentéshez a gépedre: Supabase CLI, Docker és `age`.
+8. Organization settings → DPA elfogadása.
+9. Opcionális: második projekt tesztelésre, vagy Docker a helyi `supabase start`-hoz.
 
 ### Google Cloud
 1. Új projekt (pl. „laszlobiri”).
@@ -335,12 +351,19 @@ A belépés gomb és a heti kijelölés közös mentése (`meal_picks`), ha igé
 ### Repók
 A 2. és 3. fázishoz a `bevasarlo-lista` és a `gyakorlas` repót írási joggal kell a munkamenethez adni.
 
+## Döntések
+
+| kérdés | döntés |
+| --- | --- |
+| munkamenet az aloldalak között | közös süti (`.laszlobiri.com`) |
+| további felhasználó (pl. nagyszülő) | nincs, egyetlen `parent` szerep |
+| gyerekprofilok | kettő; a becenevek csak az adatbázisban, a repóban nem |
+| listák száma | egy közös lista háztartásonként |
+| gyorsjavaslatok | közösek |
+| félbehagyott kör | nem számít, csak a befejezett kör |
+| csomag | ingyenes Supabase + helyi, titkosított mentő szkript |
+
 ## Nyitott kérdések
 
-1. **Közös süti**: elfogadod a `.laszlobiri.com` domainű, JavaScriptből írt munkamenet-sütit a fenti korlátokkal, vagy inkább aloldalanként egy kattintás a belépés?
-2. **`member` szerepkör**: kell-e rajtatok kívül valaki (pl. nagyszülő), aki csak a bevásárlólistát látja?
-3. **Gyerekek**: hány gyerekprofil lesz, és a ti telefonotokon vagy saját eszközön gyakorolnak? Ma a `gyakorlo.v1` eszközönként egy játékos. Ha a mai pontok több gyerekéi vegyesen, az import csak egy gyerekhez tudja rendelni őket.
-4. **Egy vagy több lista**: elég a háztartásonként egy közös lista (a mai működés), vagy kell több (pl. „Drogéria”, „Hétvége”)? A séma mindkettőt tudja, a UI-ban ez külön munka.
-5. **Gyorsjavaslatok**: a „gyakran vett” közös legyen (javaslat), vagy személyenként külön?
-6. **Félbehagyott kör**: rendben van, hogy az új modellben csak a befejezett kör pontjai számítanak?
-7. **Csomag**: elég az ingyenes Supabase (szünetelés egy hét tétlenség után, nincs letölthető mentés), vagy számolsz a Pro csomaggal?
+1. **A mai helyi pontok**: a telefonokon lévő `gyakorlo.v1` állapot melyik gyereké? Ha egy eszközön mindkét gyerek játszott, az import nem tudja szétválasztani: vagy az egyikhez kerül, vagy a gyerekek nulláról indulnak.
+2. **Eszköz**: a gyerekek a ti telefonotokon gyakorolnak, vagy saját eszközön (pl. tablet)? Saját eszközön szülői belépés kell, és azon a bevásárlólista is elérhető lenne.
