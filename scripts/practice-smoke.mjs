@@ -256,6 +256,14 @@ try {
   const ptsShown = await P.page.textContent('.pts');
   check(ptsShown === `${r1[0].points} pont`, `a kezdőképernyő a szerver szerinti pontot mutatja (${ptsShown})`);
 
+  // Jelvények: a jó válaszok és a környezetismeret-fejezetek jelvényei is látszanak.
+  await P.page.click('[data-go="badges"]');
+  await P.page.waitForSelector('text=Jelvényeim');
+  const bcount = await P.page.textContent('.qcount');
+  check(/\/24$/.test(bcount.trim()), `jelvények: 24 van (${bcount.trim()})`);
+  check(await P.page.isVisible('text=Kétezer jó válasz') && await P.page.isVisible('text=Rovarszakértő'), 'jelvények: „Kétezer jó válasz” és „Rovarszakértő” a listában');
+  await P.page.click('[data-go="home"]');
+
   // ---- párosító kód csak Mókusra
   await P.page.click('[data-go="parent"]');
   await P.page.waitForSelector('#dlabel');
