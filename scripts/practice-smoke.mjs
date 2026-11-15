@@ -26,7 +26,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 // ---------------------------------------------------------------- ál-Supabase
 const HH = 'aaaaaaaa-0000-0000-0000-000000000000';
 const PARENT = 'a1a1a1a1-0000-0000-0000-000000000000';
-const db = { pupils: [], results: [], badges: [], devices: [], device_pupils: [], pairings: [], reports: [] };
+const db = { pupils: [], results: [], badges: [], devices: [], device_pupils: [], pairings: [], reports: [], access: [] };
 const users = { [PARENT]: { id: PARENT, is_anonymous: false, email: 'szulo@example.invalid' } };
 const refresh = {};
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -97,6 +97,14 @@ function rest(method, table, q, body, sub) {
     if (!isParent(sub)) return { status: 200, body: method === 'GET' ? [] : null };
     if (method === 'GET') return { status: 200, body: db.reports.filter(r => !q.get('status') || r.status === q.get('status').slice(3)).map(r => pick(r, sel)) };
     if (method === 'PATCH') { const r = db.reports.find(x => x.id === inList(q, 'id')[0]); if (r) r.status = body.status; return { status: 204 }; }
+  }
+  if (table === 'chapter_access') {
+    if (method === 'GET') return { status: 200, body: isParent(sub) || deviceOf(sub) ? db.access.map(r => pick(r, sel)) : [] };
+    if (method === 'POST') {
+      if (!isParent(sub)) return err(403, '42501', 'rls');
+      for (const row of [].concat(body)) { const i = db.access.findIndex(r => r.subject === row.subject); if (i >= 0) db.access[i] = row; else db.access.push(row); }
+      return { status: 201, body: null };
+    }
   }
   if (table === 'device_pupils') return { status: 200, body: db.device_pupils.filter(x => isParent(sub) || x.device_user_id === sub).map(x => pick(x, sel)) };
   if (table === 'rpc/create_pairing') {
@@ -268,6 +276,24 @@ try {
   await shot(P.page, 'jelvenyek-csoportok');
   await P.page.click('[data-go="home"]');
 
+  // ---- Mi legyen elérhető: környezetből csak a 11–12. fejezet
+  check(await P.page.isVisible('[data-go="rovarok"]'), 'elérhetőség: beállítás nélkül minden fejezet látszik');
+  await P.page.click('[data-go="parent"]');
+  await P.page.waitForSelector('#dlabel');
+  await P.page.click('details.acc:has([data-subj="kornyezet"]) summary');
+  await P.page.click('[data-upto="kornyezet"][data-ch="k12"]');
+  check(await P.page.isChecked('input[data-acc="kornyezet"][value="k12"]') && !(await P.page.isChecked('input[data-acc="kornyezet"][value="k13"]')), 'elérhetőség: az „eddig” a 12. fejezetig pipál');
+  await P.page.click('[data-go="accsave"][data-subj="kornyezet"]');
+  await P.page.waitForFunction(() => /mentve, 2 fejezet/.test(document.querySelector('.msg').textContent));
+  const acc = db.access.find(r => r.subject === 'kornyezet');
+  check(acc && acc.household_id === HH && JSON.stringify(acc.chapters) === '["k11","k12"]', `elérhetőség: a szerveren (${JSON.stringify(acc?.chapters)})`);
+  await shot(P.page, 'elerheto-fejezetek');
+  await P.page.click('[data-go="who"]'); await P.page.click(`[data-pupil="${mokus}"]`); await P.page.waitForSelector('.whobar');
+  check(await P.page.isVisible('[data-go="novenyek"]') && !(await P.page.$('[data-go="rovarok"]')) && await P.page.isVisible('[data-go="abc"]'),
+    'elérhetőség: a kezdőképernyőn csak a bepipált környezet-fejezetek (a többi tantárgy megmarad)');
+  check(await P.page.evaluate(() => { for (let i = 0; i < 400; i++) if (['allatok', 'rovarok', 'halak'].includes(window.__gyakorlo.makeQuestion('vegyes').topic)) return false; return true; }),
+    'elérhetőség: a vegyes kör sem kérdez a zárt fejezetekből');
+
   // ---- párosító kód csak Mókusra
   await P.page.click('[data-go="parent"]');
   await P.page.waitForSelector('#dlabel');
@@ -303,6 +329,7 @@ try {
   check(db.devices.length === 1, 'tablet: párosítva (egy eszköz a szerveren)');
   check((await T.page.textContent('.whobar')).includes('Mókus') && !(await T.page.$('[data-go="who"]')), 'tablet: csak Mókus, másik gyerekre nem vált');
   check(!(await T.page.$('[data-go="parent"]')), 'tablet: nincs szülői nézet');
+  check(await T.page.isVisible('[data-go="elo"]') && !(await T.page.$('[data-go="madarak"]')), 'elérhetőség: a tableten is csak a bepipált fejezetek');
   check((await T.page.evaluate(() => document.cookie)).indexOf('auth-token') < 0, 'tablet: az eszközfiók nem a közös sütiben van');
   check(T.page.url().indexOf('#parositas') < 0, 'tablet: a párosítás után a kezdőképernyőre ugrik');
   check((await bgOf(T.page))[0] === 'rose', 'téma: Mókus tabletje rózsaszín');

@@ -16,8 +16,9 @@ Hogyan működik az egész: [`docs/backend-terv.md`](../docs/backend-terv.md). E
 | `migrations/20261114230000_pupil_theme_sky.sql` | harmadik gyerektéma: `sky` (égkék, világos) |
 | `migrations/20261115090000_results_breakout.sql` | harmadik minijáték-eredmény: `breakout` (falbontó) |
 | `migrations/20261114220000_question_reports.sql` | hibás feladat jelentése (`question_reports`) |
+| `migrations/20261115150000_chapter_access.sql` | gyakorló: tantárgyanként az elérhető tankönyvi fejezetek (`chapter_access`; a szülő írja, a háztartás tabletje olvassa) |
 | `tests/000_helpers.sql` | teszt-segédfüggvények (lekérdezés egy adott felhasználóként) |
-| `tests/001_core_rls.test.sql` … `006_results_breakout.test.sql` | pgTAP tesztek a fenti migrációkhoz |
+| `tests/001_core_rls.test.sql` … `007_chapter_access.test.sql` | pgTAP tesztek a fenti migrációkhoz |
 | `tests/stub/supabase-stub.sql` | csak a `scripts/test-db.sh`-hoz: a Supabase sémák utánzata sima Postgresen |
 | `seed.sql` | kitalált adatok a helyi fejlesztéshez |
 | `config.toml` | a Supabase CLI helyi beállítása (`supabase start`) |

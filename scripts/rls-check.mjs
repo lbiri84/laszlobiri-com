@@ -33,7 +33,7 @@ const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshTo
 const TABLES = {
   profiles: 'display_name', households: 'name', household_members: 'role',
   lists: 'name', items: 'name', item_history: 'name',
-  pupils: 'nickname', results: 'topic', pupil_badges: 'badge_id', devices: 'label', question_reports: 'prompt',
+  pupils: 'nickname', results: 'topic', pupil_badges: 'badge_id', devices: 'label', question_reports: 'prompt', chapter_access: 'subject',
   device_pupils: null,   // nincs szöveges oszlopa: csak olvasás és beszúrás
 };
 
