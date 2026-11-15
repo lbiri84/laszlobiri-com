@@ -262,6 +262,10 @@ try {
   const bcount = await P.page.textContent('.qcount');
   check(/\/24$/.test(bcount.trim()), `jelvények: 24 van (${bcount.trim()})`);
   check(await P.page.isVisible('text=Kétezer jó válasz') && await P.page.isVisible('text=Rovarszakértő'), 'jelvények: „Kétezer jó válasz” és „Rovarszakértő” a listában');
+  const bgroups = await P.page.$$eval('h2.group', hs => hs.map(h => h.textContent.trim()));
+  check(bgroups.length === 6 && bgroups[0].startsWith('Kezdés és kitartás') && bgroups.some(g => g.startsWith('Környezetismeret 0/8')), `jelvények: csoportosítva (${bgroups.join(' | ')})`);
+  check(await P.page.$$eval('.badge', b => b.length) === 24, 'jelvények: minden jelvény pontosan egyszer szerepel');
+  await shot(P.page, 'jelvenyek-csoportok');
   await P.page.click('[data-go="home"]');
 
   // ---- párosító kód csak Mókusra
