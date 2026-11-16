@@ -358,8 +358,8 @@ try {
   // Égkék (világos) téma a tableten.
   await T.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="sky"]`);
   await settle(T.page);
-  const sky = await T.page.evaluate(() => [document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor, getComputedStyle(document.querySelector('.mk .dt')).fill]);
-  check(sky[0] === 'sky' && sky[1] === 'rgb(231, 248, 252)' && sky[2] === 'rgb(0, 0, 0)', `téma: égkék, világos háttér, a jel pöttyei feketék (${sky.join(', ')})`);
+  const sky = await T.page.evaluate(() => [document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor, getComputedStyle(document.querySelector('.mk .l')).fill]);
+  check(sky[0] === 'sky' && sky[1] === 'rgb(231, 248, 252)' && sky[2] === 'rgb(0, 0, 0)', `téma: égkék, világos háttér, a jel L betűje fekete (${sky.join(', ')})`);
   check(db.pupils.find(p => p.id === mokus).theme === 'sky', 'téma: az égkék a szerverre került');
   await shot(T.page, 'egkek-kezdo');
   await T.page.click(`[data-theme-pupil="${mokus}"][data-theme-val="rose"]`);
