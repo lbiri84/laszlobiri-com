@@ -64,6 +64,7 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 | `devices`, `device_pupils` | párosított gyerek tabletek | szülő; a tablet a sajátját | `claim_pairing()`; törlés (visszavonás): szülő |
 | `private.device_pairings`, `private.pairing_attempts` | párosító kódok (hash), hibás próbálkozások | senki | `create_pairing()` / `claim_pairing()` |
 | `question_reports` | hibás feladat jelentése (a kérdés pillanatképe, okkód) | csak a szülő | beküldés: szülő / a hozzá rendelt tablet; `status`: szülő |
+| `chapter_access` | tantárgyanként az elérhető tankönyvi fejezetek kódjai (háztartásonként közös; ha nincs sor, minden elérhető) | szülő; a háztartás tabletje | csak a szülő |
 
 - Az `anon` szerep egyik táblán sem kap jogot. A segédfüggvények (`private.is_member`, `is_parent`, `list_household`, `pupil_household`, `is_device_for`) `security definer`-ek.
 - Párosítás: a kód 8 karakter, 10 percig él, egyszer használható; fiókonként 10 hibás próbálkozás után zár. A `claim_pairing` hibás kódnál nem kivételt dob, hanem `'invalid'`-ot ad, különben a számláló is visszagörgetődne.
