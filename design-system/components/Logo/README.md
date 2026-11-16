@@ -1,5 +1,5 @@
-A laszlobiri jel és lockup. A jel egy 6 × 4 pontos mátrix az L és a B betűvel, fektetve; alatta a kisbetűs felirat, a „biri” narancs.
+A laszlobiri jel és lockup. A jel egy útvonal: hat pötty cikcakkban, folytonos vonallal összekötve, a narancs kezdőponttól (bal alul) a narancs gyűrűig (jobb fent). Nagy méretben halvány háromszögháló van mögötte.
 
-Használd palakék, fekete és fehéres felületen. A jel legalább 48 px széles, a lockup legalább 96 px. Védőtér: egy rácstáv (a jel szélességének 17%-a) minden oldalon.
+Használd palakék, fekete és fehéres felületen. A jel legalább 24 px széles, hálóval legalább 64 px. Védőtér: egy rácstáv (a jel szélességének 16%-a) minden oldalon.
 
-Ne forgasd el, ne nyújtsd, ne kösd össze a pöttyöket, és ne cseréld fel a B és az L színét. A pontos geometriát és a szabályokat a README „A jel” része írja le.
+Ne forgasd el, ne nyújtsd, ne szaggasd a vonalat, és ne cserélj színt. A pontos geometriát és a szabályokat a README „A jel” része írja le.

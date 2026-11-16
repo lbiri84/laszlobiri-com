@@ -13,40 +13,47 @@ Laszlo személyes oldala és kis alkalmazásai (laszlobiri.com). A márka egy po
 
 - **Alap**: palakék (`bg`), rajta fehéres szöveg (`fg`). Világos téma is van: fehéres alap, sötét szöveg.
 - **Egyetlen kiemelő szín**: narancs. A B betűn, a „biri” feliraton, linkeken és főgombokon. Oldalanként egy-két helyen, nem tapétának.
-- **Fekete** csak mélységnek: a jel kitöltő pöttyei és sötét blokkok.
-- **Forma**: kerek pöttyök (r = 4 a 14-es rácson) és lekerekített téglalapok (`radius-md`, `radius-lg`). Nincs színátmenet, nincs árnyék, nincs keret-csík a kártyák szélén.
+- **Fekete** csak mélységnek: sötét blokkok, és a jel világos alapon.
+- **Forma**: a jel pöttyökkel összekötött útvonala (14-es rácson) és lekerekített téglalapok (`radius-md`, `radius-lg`). Nincs színátmenet, nincs árnyék, nincs keret-csík a kártyák szélén.
 - **Betűtípus**: Space Grotesk (Google Fonts), 400–700. A felirat 600-as, szoros betűközzel (-0,03em).
 - **Sűrűség**: nagyvonalú. Oldalmargó `space-16`, szekciók között `space-12`.
 
 ## A jel
 
-A jel egy 6 × 4 pontos mátrix, 14 egység rácstávval, `viewBox="0 0 81 53"`. A rácsot 90°-kal, majd 180°-kal elforgatjuk, így a betűk fektetve látszanak.
+A jel egy útvonal: hat pötty cikcakkban, folytonos vonallal összekötve, bal alul indul és jobb fent ér célba (2026-11-16 óta; a vázlat 90°-kal balra forgatva). 14 egység rácstáv, `viewBox="0 0 86 72"`. A pontok rácskoordinátái (oszlop, sor): (0, 4), (1, 3), (2, 4), (3, 2), (4, 4), (5, 0); a margó 8 egység.
 
-| elem | pontok | szín |
+| elem | alak | szín |
 | --- | --- | --- |
-| L betű | 9 tömör pötty | `mark-l` |
-| B betű | 8 tömör pötty | `mark-b` |
-| kitöltők | 4 tömör pötty a B belsejében és jobb felső sarkában | `mark-filler` |
-| L gyűrűje | 1 üres gyűrű (r = 3, vonal 2) az L végén | `mark-l` |
-| B gyűrűi | 2 üres gyűrű a B két végén | `mark-ring` (narancs) |
+| út | folytonos vonal, 2,8 vastag, lekerekített végekkel és sarkokkal; a cél gyűrűjének szélén ér véget | `mark-l` |
+| kezdőpont (bal alul) | tömör pötty, r = 5 | `mark-b` (narancs) |
+| közbülső pontok | 4 tömör pötty, r = 4; a harmadik (a középső csúcs) r = 6 | `mark-l` |
+| cél (jobb fent) | üres gyűrű, r = 4, vonal 2,8 | `mark-ring` (narancs) |
+| háló (csak nagy méretben) | háromszögháló a jel pontjaiból és a keret pontjaiból, vonal 0,7, 9% átlátszóság, lekerekített keretre vágva (`viewBox="-12 -12 110 96"`) | `mark-l` |
 
-Tömör pötty sugara 4, a gyűrűé 3 (a vonal 2 vastag, így a külső mérete is 4). A pöttyök nincsenek összekötve.
+A `mark-filler` token megmarad (a régi jelé volt), az új jel nem használja.
 
 ### A jel, palakék alapon
 
 ```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 81 53" width="162" height="106"><g transform="rotate(180 40.5 26.5)"><g transform="translate(81 0) rotate(90)"><circle fill="#000000" cx="47.5" cy="5.5" r="4"/><circle fill="#000000" cx="33.5" cy="19.5" r="4"/><circle fill="#000000" cx="47.5" cy="33.5" r="4"/><circle fill="#000000" cx="33.5" cy="47.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="5.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="19.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="33.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="47.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="61.5" r="4"/><circle fill="#eaecf0" cx="5.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="19.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="33.5" cy="75.5" r="4"/><circle fill="#eaecf0" cx="47.5" cy="75.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="5.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="19.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="33.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="47.5" r="4"/><circle fill="#ee8643" cx="19.5" cy="61.5" r="4"/><circle fill="#ee8643" cx="33.5" cy="5.5" r="4"/><circle fill="#ee8643" cx="33.5" cy="33.5" r="4"/><circle fill="#ee8643" cx="47.5" cy="19.5" r="4"/><circle stroke="#eaecf0" cx="47.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle stroke="#ee8643" cx="33.5" cy="61.5" r="3" fill="none" stroke-width="2"/><circle stroke="#ee8643" cx="47.5" cy="47.5" r="3" fill="none" stroke-width="2"/></g></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 86 72" width="172" height="144"><rect width="86" height="72" fill="#293c4b"/><polyline stroke="#eaecf0" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" points="8,64 22,50 36,64 50,36 64,64 77.03,11.88"/><circle fill="#ee8643" cx="8" cy="64" r="5"/><circle fill="#eaecf0" cx="22" cy="50" r="4"/><circle fill="#eaecf0" cx="36" cy="64" r="4"/><circle fill="#eaecf0" cx="50" cy="36" r="6"/><circle fill="#eaecf0" cx="64" cy="64" r="4"/><circle stroke="#ee8643" cx="78" cy="8" r="4" fill="none" stroke-width="2.8"/></svg>
 ```
 
-Világos alapon használd a világos téma tokenjeit (`mark-l` fekete, `mark-filler` palakék; a B gyűrűi itt is narancsok). A `Logo` komponens mindhárom felületet megmutatja.
+Világos alapon a világos téma tokenjeivel (`mark-l` fekete; a kezdőpont és a cél itt is narancs). Inline használatnál a jel osztályokkal készül (`ln`, `st`, `dt`, `en`, `ms`), a színt a tokenek adják:
+
+```css
+.mk .ln{stroke:var(--mark-l)}.mk .dt{fill:var(--mark-l)}.mk .st{fill:var(--mark-b)}.mk .en{stroke:var(--mark-ring)}.mk .ms{stroke:var(--mark-l);stroke-opacity:.09}
+```
+
+### Háló
+
+A háló a jel mögötti halvány háromszögháló, csak nagy méretben (a főoldal és a belépés logója, a kezdőképernyő-ikon): `assets/logo/mark-mesh-on-slate.svg`, `mark-mesh-on-light.svg`. 64 px alatt nincs háló, ott a sima jel kell (fejlécek, böngészőfül-ikon).
 
 ### Lockup és szabályok
 
-- **Lockup**: a jel fölül, középen; alatta a „laszlobiri” felirat. A „laszlo” `fg`, a „biri” narancs (`accent`).
-- A felirat szélessége nagyjából a jel szélességének 1,6-szerese. Köztük a jel magasságának negyede.
-- **Védőtér**: minden oldalon legalább egy rácstáv (14 egység, a jel szélességének 17%-a).
-- **Legkisebb méret**: a jel 48 px széles, a lockup 96 px széles. Ennél kisebben csak a felirat nélküli jel jó, 24 px-ig.
-- Ne forgasd el más szögre, ne nyújtsd, ne kösd össze a pöttyöket, ne cserélj színt a B és az L között.
+- **Lockup**: a jel fölül vagy balra; mellette vagy alatta a „laszlobiri” felirat. A „laszlo” `fg`, a „biri” narancs (`accent`).
+- **Védőtér**: minden oldalon legalább egy rácstáv (14 egység, a jel szélességének 16%-a).
+- **Legkisebb méret**: a jel 24 px széles; hálóval 64 px.
+- Ne forgasd el, ne nyújtsd, ne szaggasd a vonalat, és ne cserélj színt: a kezdőpont és a cél narancs, a többi `mark-l`.
 
 ## Szín
 
@@ -123,5 +130,5 @@ Szabályok:
 ## Fájlok ebben a repóban
 
 - `tokens.json`: a tokenek forrása. `tokens.css`: ebből generált CSS-változók (`data-theme="slate"` vagy `"light"`); az aloldalak ezt a fájlt töltik be a `laszlobiri.com` címről (lásd fent).
-- `assets/logo/mark-on-slate.svg` és `mark-on-light.svg`: a jel, palakék és világos alapra.
+- `assets/logo/mark-on-slate.svg` és `mark-on-light.svg`: a jel, palakék és világos alapra; `mark-mesh-on-slate.svg` és `mark-mesh-on-light.svg`: hálóval.
 - `components/Logo`, `components/Cover`: az élő előnézetek (a Claude design system oldalán nyílnak meg, a `tokens.css`-t várják).
