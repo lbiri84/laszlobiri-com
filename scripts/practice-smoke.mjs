@@ -100,10 +100,17 @@ function rest(method, table, q, body, sub) {
   }
   if (table === 'chapter_access') {
     if (method === 'GET') return { status: 200, body: isParent(sub) || deviceOf(sub) ? db.access.map(r => pick(r, sel)) : [] };
+    // Mint az éles adatbázis: upsert (on_conflict) nem megy, mert a kulcsoszlopokra nincs UPDATE jog.
     if (method === 'POST') {
-      if (!isParent(sub)) return err(403, '42501', 'rls');
-      for (const row of [].concat(body)) { const i = db.access.findIndex(r => r.subject === row.subject); if (i >= 0) db.access[i] = row; else db.access.push(row); }
+      if (!isParent(sub) || q.get('on_conflict')) return err(403, '42501', 'permission denied for table chapter_access');
+      for (const row of [].concat(body)) { if (db.access.some(r => r.subject === row.subject)) return err(409, '23505', 'chapter_access_pkey'); db.access.push(row); }
       return { status: 201, body: null };
+    }
+    if (method === 'PATCH') {
+      if (!isParent(sub) || Object.keys(body).some(k => !['chapters', 'updated_at'].includes(k))) return err(403, '42501', 'permission denied for table chapter_access');
+      const subj = inList(q, 'subject')?.[0], r = db.access.find(x => x.subject === subj);
+      if (r) Object.assign(r, body);
+      return { status: 200, body: r ? [pick(r, sel)] : [] };
     }
   }
   if (table === 'device_pupils') return { status: 200, body: db.device_pupils.filter(x => isParent(sub) || x.device_user_id === sub).map(x => pick(x, sel)) };
@@ -287,6 +294,13 @@ try {
   await P.page.waitForFunction(() => /mentve, 2 fejezet/.test(document.querySelector('.msg').textContent));
   const acc = db.access.find(r => r.subject === 'kornyezet');
   check(acc && acc.household_id === HH && JSON.stringify(acc.chapters) === '["k11","k12"]', `elérhetőség: a szerveren (${JSON.stringify(acc?.chapters)})`);
+  await P.page.click('[data-upto="kornyezet"][data-ch="k13"]');
+  await P.page.click('[data-go="accsave"][data-subj="kornyezet"]');
+  await P.page.waitForFunction(() => /mentve, 3 fejezet/.test(document.querySelector('.msg').textContent));
+  check(JSON.stringify(db.access.find(r => r.subject === 'kornyezet').chapters) === '["k11","k12","k13"]' && db.access.length === 1, 'elérhetőség: a második mentés frissít (nem új sor)');
+  await P.page.click('[data-upto="kornyezet"][data-ch="k12"]');
+  await P.page.click('[data-go="accsave"][data-subj="kornyezet"]');
+  await P.page.waitForFunction(() => /mentve, 2 fejezet/.test(document.querySelector('.msg').textContent));
   await shot(P.page, 'elerheto-fejezetek');
   await P.page.click('[data-go="who"]'); await P.page.click(`[data-pupil="${mokus}"]`); await P.page.waitForSelector('.whobar');
   check(await P.page.isVisible('[data-go="novenyek"]') && !(await P.page.$('[data-go="rovarok"]')) && await P.page.isVisible('[data-go="abc"]'),
