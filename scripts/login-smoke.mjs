@@ -194,9 +194,9 @@ try {
   // ---- Admin oldal
   globalThis.access = FAMILY;
   await page.goto(`${ORIGIN}/admin/`);
-  await page.waitForSelector('#list form');
-  check((await page.$$('#list form')).length === 2, 'admin: a címek listája');
-  check(await page.$eval('#list form:first-child button[data-remove]', b => b.disabled) && await page.$eval('#list form:first-child input[name=hh]', b => b.disabled),
+  await page.waitForSelector('#list tr');
+  check((await page.$$('#list tr')).length === 2, 'admin: a címek listája');
+  check(await page.$eval('#list tr:first-child button[data-remove]', b => b.disabled) && await page.$eval('#list tr:first-child input[name=hh]', b => b.disabled),
     'admin: saját magát nem vonhatja vissza, a családból sem veheti ki');
   await page.fill('#addEmail', 'Uj.Lako@Example.invalid');
   await page.check('#addApps input[value=elszamolas]');
@@ -206,16 +206,24 @@ try {
   const add = calls.find(c => c[0] === 'admin_access_set');
   check(add && add[1].p_email === 'uj.lako@example.invalid' && add[1].p_apps.join() === 'elszamolas' && add[1].p_household === false && add[1].p_note === '5. lakás',
     'admin: új lakótárs felvétele (kisbetűs cím, csak az elszámoló, család nélkül)');
-  check((await page.$$('#list form')).length === 3, 'admin: a lista frissül');
-  await page.check('#list form:nth-child(2) input[value=ebed]');
-  await page.click('#list form:nth-child(2) button[type=submit]');
+  check((await page.$$('#list tr')).length === 3, 'admin: a lista frissül');
+  await page.check('#list tr:nth-child(2) input[value=ebed]');
   await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
-  check(acl[1].apps.includes('ebed') && acl[1].apps.includes('elszamolas'), 'admin: oldal hozzáadása egy meglévő címhez');
+  check(acl[1].apps.includes('ebed') && acl[1].apps.includes('elszamolas'), 'admin: a pipa azonnal mentődik (oldal hozzáadása egy meglévő címhez)');
+  await page.evaluate(() => { document.getElementById('msg').textContent = ''; });
+  await page.fill('#list tr:nth-child(2) input[name=note]', '4. lakás');
+  await page.press('#list tr:nth-child(2) input[name=note]', 'Enter');
+  await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
+  check(acl[1].note === '4. lakás' && acl[1].apps.length === 2, 'admin: a megjegyzés Enterre mentődik, a pipák maradnak');
   page.once('dialog', d => d.accept());
-  await page.click('#list form:nth-child(3) button[data-remove]');
+  await page.click('#list tr:nth-child(3) button[data-remove]');
   await page.waitForFunction(() => /Visszavonva/.test(document.getElementById('msg').textContent));
-  check(!acl.some(x => x.email === 'uj.lako@example.invalid') && (await page.$$('#list form')).length === 2, 'admin: visszavonás megerősítés után');
+  check(!acl.some(x => x.email === 'uj.lako@example.invalid') && (await page.$$('#list tr')).length === 2, 'admin: visszavonás megerősítés után');
   await shot(page, 'admin');
+  await page.setViewportSize({ width: 390, height: 844 });
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'admin: telefonon nincs vízszintes oldalgörgetés (a táblázat görgethető)');
+  await shot(page, 'admin-telefon');
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // Kilépés az aloldalon.
   await page.goto(target);

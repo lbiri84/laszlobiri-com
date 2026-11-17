@@ -31,24 +31,30 @@ const appBoxes = (name, on, dis = false) => SITES.map(s =>
 
 const checked = (root, name) => [...root.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
 
-function card(r, i) {
+// A táblázat oszlopainak rövid neve.
+const SHORT = { ebed: 'Interfood', bevasarlas: 'Lista', gyakorlas: 'Gyakorló', elszamolas: 'Elszámolás' };
+
+function row(r, i) {
   const self = r.email === me;
   const who = r.has_account
-    ? `${esc(r.display_name || 'Fiók')}, utoljára belépett: ${r.last_sign_in_at ? esc(day(r.last_sign_in_at)) : 'még nem'}`
+    ? `${esc(r.display_name || 'Fiók')}, utoljára: ${r.last_sign_in_at ? esc(day(r.last_sign_in_at)) : 'még nem'}`
     : 'Még nem lépett be.';
-  return `<form class="card" data-i="${i}" novalidate>
-  <div class="email">${esc(r.email)}${r.app_role === 'admin' ? '<span class="pill">admin</span>' : ''}${self ? '<span class="pill">te</span>' : ''}</div>
-  <p class="who">${who}</p>
-  <fieldset><legend>Oldalak</legend><div class="checks">${appBoxes('app', r.apps || [])}</div></fieldset>
-  <fieldset><legend>Család</legend><div class="checks"><label class="chk${self ? ' dis' : ''}"><input type="checkbox" name="hh"${r.in_household ? ' checked' : ''}${self ? ' disabled' : ''}> Családtag</label></div></fieldset>
-  <label class="field"><span>Megjegyzés</span><input type="text" name="note" maxlength="80" value="${esc(r.note)}"></label>
-  <div class="row"><button class="primary" type="submit" disabled>Mentés</button><button class="danger" type="button" data-remove${self ? ' disabled' : ''}>Visszavonás</button></div>
-</form>`;
+  const box = (name, val, on, label, dis = false) =>
+    `<td class="c"><input type="checkbox" name="${name}" value="${val}"${on ? ' checked' : ''}${dis ? ' disabled' : ''} aria-label="${esc(r.email)}: ${esc(label)}"></td>`;
+  return `<tr data-i="${i}">
+  <td class="addr"><div class="email">${esc(r.email)}</div>${r.app_role === 'admin' || self ? `<div>${r.app_role === 'admin' ? '<span class="pill">admin</span>' : ''}${self ? '<span class="pill">te</span>' : ''}</div>` : ''}<div class="who">${who}</div></td>
+  ${SITES.map(s => box('app', s.app, (r.apps || []).includes(s.app), SHORT[s.app] || s.name)).join('')}
+  ${box('hh', '1', r.in_household, 'Családtag', self)}
+  <td class="note"><input type="text" name="note" maxlength="80" value="${esc(r.note)}" aria-label="${esc(r.email)}: megjegyzés"></td>
+  <td class="act"><button class="danger" type="button" data-remove${self ? ' disabled' : ''}>Visszavonás</button></td>
+</tr>`;
 }
 
 function render() {
   $('count').textContent = `(${rows.length})`;
-  $('list').innerHTML = rows.map(card).join('');
+  $('head').innerHTML = '<th>Cím</th>' + SITES.map(s => `<th${s.soon ? ' title="készül"' : ''}>${esc(SHORT[s.app] || s.name)}${s.soon ? '*' : ''}</th>`).join('')
+    + '<th>Család</th><th>Megjegyzés</th><th></th>';
+  $('list').innerHTML = rows.map(row).join('');
 }
 
 async function load() {
@@ -92,25 +98,29 @@ async function init() {
     finally { f.querySelector('button').disabled = false; }
   });
 
-  // Változáskor a Mentés gomb aktív lesz.
-  $('list').addEventListener('input', e => { const f = e.target.closest('form'); if (f) f.querySelector('button[type=submit]').disabled = false; });
-
-  $('list').addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target, r = rows[+f.dataset.i], btn = f.querySelector('button[type=submit]');
-    const hh = f.querySelector('input[name=hh]');
-    btn.disabled = true;
+  // Pipa vagy megjegyzés változása: a sor azonnal mentődik (a megjegyzés kilépéskor vagy Enterre).
+  $('list').addEventListener('change', async e => {
+    const tr = e.target.closest('tr');
+    if (!tr || tr.classList.contains('busy')) return;
+    const r = rows[+tr.dataset.i], hh = tr.querySelector('input[name=hh]');
+    const note = tr.querySelector('input[name=note]').value.trim();
+    tr.classList.add('busy');
+    tr.querySelectorAll('input').forEach(i => { i.dataset.dis = i.disabled ? '1' : ''; i.disabled = true; });
     try {
-      await save(r.email, checked(f, 'app'), hh.disabled ? r.in_household : hh.checked, f.querySelector('input[name=note]').value.trim());
+      await save(r.email, checked(tr, 'app'), hh.dataset.dis ? r.in_household : hh.checked, note);
       await load();
       say(`Mentve: ${r.email}.`);
-    } catch (err) { btn.disabled = false; say(errText(err), 'error'); }
+    } catch (err) {
+      say(errText(err), 'error');
+      try { await load(); } catch { /* az üzenet már ott van */ }
+    }
   });
+  $('list').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.name === 'note') e.target.blur(); });
 
   $('list').addEventListener('click', async e => {
     const b = e.target.closest('button[data-remove]');
     if (!b) return;
-    const r = rows[+b.closest('form').dataset.i];
+    const r = rows[+b.closest('tr').dataset.i];
     if (!confirm(`Visszavonod ${r.email} hozzáférését? A fiókja megmarad, de egyik oldalt sem nyithatja meg, és kikerül a családból.`)) return;
     b.disabled = true;
     try {
