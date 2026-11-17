@@ -117,6 +117,8 @@
   }
   footer a { color: var(--fg-muted); }
   footer { align-items: center; }
+  .noapps { color: var(--fg-muted); }
+  [hidden] { display: none !important; }
 
   @media (max-width: 640px) { body { padding-left: var(--space-4); padding-right: var(--space-4); } }
   @media (prefers-reduced-motion: reduce) {
@@ -138,8 +140,9 @@
     másold le az egyik <li> blokkot, írd át a számot, a címet, a leírást és a linket (href + a meta sor).
     Az "empty" kártyát töröld vagy írd át, ha már nincs rá szükség.
   -->
-  <ul class="grid">
-    <li>
+  <p class="noapps" id="noapps" hidden>Még egyik alkalmazáshoz sincs hozzáférésed. Ha kellene, kérd az oldal gazdájától.</p>
+  <ul class="grid" id="apps" hidden>
+    <li data-app="ebed">
       <a class="app" href="https://ebed.laszlobiri.com">
         <div class="top"><span class="no">01</span><span class="pill">élő</span></div>
         <h2>Interfood rendelés</h2>
@@ -147,7 +150,7 @@
         <div class="meta"><span>ebed.laszlobiri.com</span><span class="arrow" aria-hidden="true">→</span></div>
       </a>
     </li>
-    <li>
+    <li data-app="bevasarlas">
       <a class="app" href="https://bevasarlas.laszlobiri.com">
         <div class="top"><span class="no">02</span><span class="pill">élő</span></div>
         <h2>Bevásárlólista</h2>
@@ -155,7 +158,7 @@
         <div class="meta"><span>bevasarlas.laszlobiri.com</span><span class="arrow" aria-hidden="true">→</span></div>
       </a>
     </li>
-    <li>
+    <li data-app="gyakorlas">
       <a class="app" href="https://gyakorlas.laszlobiri.com">
         <div class="top"><span class="no">03</span><span class="pill">élő</span></div>
         <h2>Gyakorló</h2>
@@ -173,7 +176,26 @@
   </ul>
 </main>
 
-<footer><span>laszlobiri.com · <a href="/adatvedelem/">Adatkezelés</a></span><lb-auth></lb-auth><span>© 2026 Biri László</span></footer>
+<footer><span>laszlobiri.com · <a href="/adatvedelem/">Adatkezelés</a><span id="admin" hidden> · <a href="/admin/">Hozzáférések</a></span></span><lb-auth></lb-auth><span>© 2026 Biri László</span></footer>
+
+<script type="module">
+  // Csak azok az alkalmazások látszanak, amelyekhez a belépett felhasználó hozzáfér (lib/v1/access.js).
+  import { ready } from '/lib/v1/gate.js';
+  import { getAccess, cachedAccess } from '/lib/v1/access.js';
+  const grid = document.getElementById('apps');
+  const apply = a => {
+    let n = 0;
+    document.querySelectorAll('[data-app]').forEach(li => { li.hidden = !a.apps.includes(li.dataset.app); if (!li.hidden) n++; });
+    document.getElementById('noapps').hidden = n > 0;
+    document.getElementById('admin').hidden = !a.admin;
+    grid.hidden = n === 0;
+  };
+  const { user } = await ready;
+  const c = cachedAccess(user?.id);
+  if (c) apply(c);
+  if (user) getAccess(user.id).then(apply).catch(() => { if (!c) grid.hidden = false; });
+  else if (!c) grid.hidden = false;   // offline, még soha nem kérdeztük: minden kártya
+</script>
 
 </body>
 </html>

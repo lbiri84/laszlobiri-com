@@ -42,6 +42,14 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 - A gyakorló kapuja a párosított gyerek tabletet (`localStorage['lb-device']`) és a párosító oldalt (`#parositas`) is átengedi.
 - Kivétel: `/belepes/` és `/adatvedelem/` nyilvános.
 
+### Oldalankénti hozzáférés és admin felület
+
+- Minden engedélyezett címhez tartozik, mely aloldalakat nyithatja meg (`allowed_emails.apps`: `ebed`, `bevasarlas`, `gyakorlas`, `elszamolas`). A család címei a bevezetéskor az első hármat kapták.
+- A kapu (`gate.js`) aloldalon a `my_access()` alapján dönt; a választ az oldal localStorage-a (`lb-access`) megjegyzi, így offline és gyorsan is működik, online mindig frissül. Ha nincs hozzáférés: „Ehhez az oldalhoz nincs hozzáférésed.”, a `ready` nem teljesül. Hálózati hibánál a legutóbbi ismert döntés számít, ha nincs ilyen, megnyílik. A főoldal csak a megnyitható alkalmazásokat mutatja.
+- A „Családtag” a háztartás-tagság: ez nyitja meg a családi adatokat az RLS-ben (lista, gyerekprofilok, eredmények). Aki nem családtag (pl. egy lakótárs), az ott akkor sem lát semmit, ha a kaput megkerüli; ezt a `008` teszt bizonyítja.
+- `/admin/` (csak `app_role = 'admin'`): a címek listája (van-e fiók, utolsó belépés), felvétel, oldalak, családtag, megjegyzés (legfeljebb 80 karakter), visszavonás. Az admin függvények maguk is ellenőrzik a jogot; az admin magát nem veheti ki a családból és nem vonhatja vissza. Visszavonáskor a cím és a tagság megszűnik, a fiók megmarad, de semmihez nem fér hozzá (törlés: dashboard).
+- Új aloldal: kód a `private.app_codes()`-ba és az `allowed_emails.apps` feltételébe (migráció), a `lib/v1/access.js` `SITES` listájába, és az origin a `auth.js` `SITE_ORIGINS`-ába.
+
 ### Ismert korlátok
 
 - Safari (ITP) a JavaScriptből írt sütit legfeljebb 7 napig tartja meg; minden frissítés újraírja, tehát csak egy hét teljes kihagyás után kell újra belépni.
@@ -52,9 +60,9 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 
 | tábla | tartalom | ki olvassa | ki írja |
 | --- | --- | --- | --- |
-| `private.allowed_emails` | engedélyezett címek, háztartás, szerep | senki (nincs közzétéve) | admin SQL |
+| `private.allowed_emails` | engedélyezett címek, háztartás, szerep, megnyitható aloldalak (`apps`), megjegyzés | senki közvetlenül; a saját `apps` a `my_access()`-szel, a teljes lista az adminnak az `admin_access_list()`-tel | admin: a `/admin/` oldal (`admin_access_set` / `admin_access_remove`); az admin szerep csak SQL |
 | `profiles` | név, `app_role` | saját + a háztartás tagjai | saját név (`display_name`); a többit a trigger |
-| `households`, `household_members` | háztartás, tagság (`parent`) | tagok | név: szülő; tagság: trigger / admin SQL |
+| `households`, `household_members` | háztartás, tagság (`parent`) | tagok | név: szülő; tagság: trigger / az admin oldal („Családtag”) |
 | `lists` | háztartásonként egy lista (trigger hozza létre) | tagok | név: tagok |
 | `items` | tétel (`name_key` egyedi az élő tételek között, soft delete) | tagok | tagok; `created_by`, `updated_*`, `list_id` a szerveré; valódi törlés nincs |
 | `item_history` | „gyakran vett” javaslatok | tagok | csak `bump_history()` |
@@ -111,6 +119,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 | munkamenet az aloldalak között | közös süti (`.laszlobiri.com`) |
 | használat belépés nélkül | nincs; böngészős kapu minden oldalon, a `/belepes/` és az `/adatvedelem/` kivételével. Szerveroldali védelem (más tárhely) elvetve. |
 | felhasználók | két szülő, egy `parent` szerep; további szerep egy migrációval vehető fel |
+| több oldal, más felhasználók (pl. lakótársak) | közös belépés, oldalankénti hozzáférés (`apps`); a családi adatot a háztartás-tagság védi; kezelés a `/admin/` oldalon (2026-11-17) |
 | gyerekprofilok | kettő; a becenevek csak az adatbázisban, a repókban nem |
 | gyerekek saját eszköze | gyerek mód: névtelen, párosított eszközfiók, PIN-nel lehet kilépni |
 | listák | egy közös lista háztartásonként; közös gyorsjavaslatok |
@@ -134,8 +143,8 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 
 | parancs | mit ellenőriz |
 | --- | --- |
-| `npm run test:db` | pgTAP: allowlist és profil (001), közös lista (002), gyakorló és gyerek mód (003), színtéma (004), jelentések (005), falbontó-eredmény (006). Helyi Postgresen, Supabase-stubbal. |
-| `npm run test:smoke` | böngészős próbák ál-Supabase-zel: belépés és kapu (`login-smoke`), kéttelefonos listaszinkron (`list-sync-smoke`), gyakorló szülővel és tablettel (`practice-smoke`). A bevasarlo-lista és a gyakorlas repó a laszlobiri-com mellett legyen. |
+| `npm run test:db` | pgTAP: allowlist és profil (001), közös lista (002), gyakorló és gyerek mód (003), színtéma (004), jelentések (005), falbontó-eredmény (006), elérhető fejezetek (007), oldalankénti hozzáférés és admin (008). Helyi Postgresen, Supabase-stubbal. |
+| `npm run test:smoke` | böngészős próbák ál-Supabase-zel: belépés, kapu, oldalankénti hozzáférés és admin oldal (`login-smoke`), kéttelefonos listaszinkron (`list-sync-smoke`), gyakorló szülővel és tablettel (`practice-smoke`). A bevasarlo-lista és a gyakorlas repó a laszlobiri-com mellett legyen. |
 | `npm run check:rls` | az éles projekt a nyilvános kulccsal: bejelentkezés nélkül semmi nem olvasható és írható. Proxy mögött `NODE_USE_ENV_PROXY=1`. |
 
 ## Hátralévő munka
