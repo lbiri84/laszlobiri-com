@@ -284,7 +284,19 @@ try {
   await P.page.click('[data-go="home"]');
 
   // ---- Mi legyen elérhető: környezetből csak a 11–12. fejezet
-  check(await P.page.isVisible('[data-go="rovarok"]'), 'elérhetőség: beállítás nélkül minden fejezet látszik');
+  check(!!(await P.page.$('[data-go="rovarok"]')), 'elérhetőség: beállítás nélkül minden fejezet ott van');
+  // Összecsukás: a témakörök alapból csukva, koppintásra nyílnak, és újratöltés után is nyitva maradnak.
+  check(!(await P.page.isVisible('[data-go="madarak"]')), 'összecsukás: a témakör alapból csukva');
+  await P.page.click('details.tk[data-fold="Környezetismeret/II. Élő környezetünk"] > summary');
+  check(await P.page.isVisible('[data-go="madarak"]'), 'összecsukás: koppintásra kinyílik a témakör');
+  await P.page.click('details.tk[data-fold="Matek/Számolás 0-tól 100-ig"] > summary');
+  await P.page.waitForTimeout(400); await shot(P.page, 'osszecsukas-nyitva');
+  await P.page.click('details.tk[data-fold="Matek/Számolás 0-tól 100-ig"] > summary');
+  await P.page.click('details.subj[data-fold="Nyelvtan"] > summary');
+  check(!(await P.page.isVisible('[data-go="abc"]')), 'összecsukás: a tantárgy is becsukható');
+  await P.page.reload(); await P.page.waitForSelector('.whobar');
+  check(await P.page.isVisible('[data-go="madarak"]') && !(await P.page.isVisible('[data-go="abc"]')), 'összecsukás: újratöltés után megmarad');
+  await P.page.click('details.subj[data-fold="Nyelvtan"] > summary');
   await P.page.click('[data-go="parent"]');
   await P.page.waitForSelector('#dlabel');
   await P.page.click('details.acc:has([data-subj="kornyezet"]) summary');
@@ -303,7 +315,7 @@ try {
   await P.page.waitForFunction(() => /mentve, 2 fejezet/.test(document.querySelector('.msg').textContent));
   await shot(P.page, 'elerheto-fejezetek');
   await P.page.click('[data-go="who"]'); await P.page.click(`[data-pupil="${mokus}"]`); await P.page.waitForSelector('.whobar');
-  check(await P.page.isVisible('[data-go="novenyek"]') && !(await P.page.$('[data-go="rovarok"]')) && await P.page.isVisible('[data-go="abc"]'),
+  check(!!(await P.page.$('[data-go="novenyek"]')) && !(await P.page.$('[data-go="rovarok"]')) && await P.page.isVisible('[data-go="abc"]'),
     'elérhetőség: a kezdőképernyőn csak a bepipált környezet-fejezetek (a többi tantárgy megmarad)');
   check(await P.page.evaluate(() => { for (let i = 0; i < 400; i++) if (['allatok', 'rovarok', 'halak'].includes(window.__gyakorlo.makeQuestion('vegyes').topic)) return false; return true; }),
     'elérhetőség: a vegyes kör sem kérdez a zárt fejezetekből');
@@ -343,7 +355,7 @@ try {
   check(db.devices.length === 1, 'tablet: párosítva (egy eszköz a szerveren)');
   check((await T.page.textContent('.whobar')).includes('Mókus') && !(await T.page.$('[data-go="who"]')), 'tablet: csak Mókus, másik gyerekre nem vált');
   check(!(await T.page.$('[data-go="parent"]')), 'tablet: nincs szülői nézet');
-  check(await T.page.isVisible('[data-go="elo"]') && !(await T.page.$('[data-go="madarak"]')), 'elérhetőség: a tableten is csak a bepipált fejezetek');
+  check(!!(await T.page.$('[data-go="elo"]')) && !(await T.page.$('[data-go="madarak"]')), 'elérhetőség: a tableten is csak a bepipált fejezetek');
   check((await T.page.evaluate(() => document.cookie)).indexOf('auth-token') < 0, 'tablet: az eszközfiók nem a közös sütiben van');
   check(T.page.url().indexOf('#parositas') < 0, 'tablet: a párosítás után a kezdőképernyőre ugrik');
   check((await bgOf(T.page))[0] === 'rose', 'téma: Mókus tabletje rózsaszín');
@@ -372,8 +384,8 @@ try {
   await T.ctx.setOffline(true);
   await playRound(T.page);
   await T.page.click('[data-go="home"]');
-  await T.page.waitForFunction(() => /Offline · 1 eredmény vár/.test(document.querySelector('.foot').textContent));
-  check(true, 'tablet offline: „Offline · 1 eredmény vár”');
+  await T.page.waitForFunction(() => /Offline, 1 eredmény vár/.test(document.querySelector('.foot').textContent));
+  check(true, 'tablet offline: „Offline, 1 eredmény vár”');
   await T.ctx.setOffline(false);
   await T.page.evaluate(() => window.dispatchEvent(new Event('online')));
   await settle(T.page);
