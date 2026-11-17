@@ -384,8 +384,8 @@ try {
   await T.ctx.setOffline(true);
   await playRound(T.page);
   await T.page.click('[data-go="home"]');
-  await T.page.waitForFunction(() => /Offline · 1 eredmény vár/.test(document.querySelector('.foot').textContent));
-  check(true, 'tablet offline: „Offline · 1 eredmény vár”');
+  await T.page.waitForFunction(() => /Offline, 1 eredmény vár/.test(document.querySelector('.foot').textContent));
+  check(true, 'tablet offline: „Offline, 1 eredmény vár”');
   await T.ctx.setOffline(false);
   await T.page.evaluate(() => window.dispatchEvent(new Event('online')));
   await settle(T.page);
