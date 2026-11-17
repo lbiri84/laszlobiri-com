@@ -46,8 +46,8 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 
 - Minden engedélyezett címhez tartozik, mely aloldalakat nyithatja meg (`allowed_emails.apps`: `ebed`, `bevasarlas`, `gyakorlas`, `elszamolas`). A család címei a bevezetéskor az első hármat kapták.
 - A kapu (`gate.js`) aloldalon a `my_access()` alapján dönt; a választ az oldal localStorage-a (`lb-access`) megjegyzi, így offline és gyorsan is működik, online mindig frissül. Ha nincs hozzáférés: „Ehhez az oldalhoz nincs hozzáférésed.”, a `ready` nem teljesül. Hálózati hibánál a legutóbbi ismert döntés számít, ha nincs ilyen, megnyílik. A főoldal csak a megnyitható alkalmazásokat mutatja.
-- A „Családtag” a háztartás-tagság: ez nyitja meg a családi adatokat az RLS-ben (lista, gyerekprofilok, eredmények). Aki nem családtag (pl. egy lakótárs), az ott akkor sem lát semmit, ha a kaput megkerüli; ezt a `008` teszt bizonyítja.
-- `/admin/` (csak `app_role = 'admin'`): a címek listája (van-e fiók, utolsó belépés), felvétel, oldalak, családtag, megjegyzés (legfeljebb 80 karakter), visszavonás. Az admin függvények maguk is ellenőrzik a jogot; az admin magát nem veheti ki a családból és nem vonhatja vissza. Visszavonáskor a cím és a tagság megszűnik, a fiók megmarad, de semmihez nem fér hozzá (törlés: dashboard).
+- Az oldal-pipa az adatot is védi (2026-11-17 óta): a bevásárlólista adataihoz (`lists`, `items`, `item_history`, `bump_history`) a `bevasarlas`, a gyakorló szülői adataihoz (minden, ami a `private.is_parent()`-en megy át: gyerekprofilok, eredmények, jelvények, tabletek, párosítás, jelentések, fejezetek) a `gyakorlas` is kell a háztartás-tagság mellett (`private.has_app()`, `private.can_list()`). A háztartás-tagság magától állítódik: aki a két családi oldal egyikét megkapja, tag; akinek mindkettő lekerül, kikerül. Külön „Család” pipa nincs. A gyerek tablet nem változik. Lakótárs (csak Elszámolás) a családi adatokból semmit nem lát, akkor sem, ha a kaput megkerüli; ezt a `008` és `009` teszt bizonyítja.
+- `/admin/` (csak `app_role = 'admin'`): a címek listája (van-e fiók, utolsó belépés), felvétel, oldalak, megjegyzés (legfeljebb 80 karakter), visszavonás. Az admin függvények maguk is ellenőrzik a jogot; az admin magát nem vonhatja vissza, és nála a Lista vagy a Gyakorló megmarad. Visszavonáskor a cím és a háztartás-tagság megszűnik, a fiók megmarad, de semmihez nem fér hozzá (törlés: dashboard).
 - Új aloldal: kód a `private.app_codes()`-ba és az `allowed_emails.apps` feltételébe (migráció), a `lib/v1/access.js` `SITES` listájába, és az origin a `auth.js` `SITE_ORIGINS`-ába.
 
 ### Ismert korlátok
@@ -62,10 +62,10 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 | --- | --- | --- | --- |
 | `private.allowed_emails` | engedélyezett címek, háztartás, szerep, megnyitható aloldalak (`apps`), megjegyzés | senki közvetlenül; a saját `apps` a `my_access()`-szel, a teljes lista az adminnak az `admin_access_list()`-tel | admin: a `/admin/` oldal (`admin_access_set` / `admin_access_remove`); az admin szerep csak SQL |
 | `profiles` | név, `app_role` | saját + a háztartás tagjai | saját név (`display_name`); a többit a trigger |
-| `households`, `household_members` | háztartás, tagság (`parent`) | tagok | név: szülő; tagság: trigger / az admin oldal („Családtag”) |
-| `lists` | háztartásonként egy lista (trigger hozza létre) | tagok | név: tagok |
-| `items` | tétel (`name_key` egyedi az élő tételek között, soft delete) | tagok | tagok; `created_by`, `updated_*`, `list_id` a szerveré; valódi törlés nincs |
-| `item_history` | „gyakran vett” javaslatok | tagok | csak `bump_history()` |
+| `households`, `household_members` | háztartás, tagság (`parent`) | tagok | név: szülő; tagság: trigger / az admin oldal (a Lista vagy a Gyakorló pipával jár) |
+| `lists` | háztartásonként egy lista (trigger hozza létre) | tagok Lista pipával | név: ugyanők |
+| `items` | tétel (`name_key` egyedi az élő tételek között, soft delete) | tagok Lista pipával | ugyanők; `created_by`, `updated_*`, `list_id` a szerveré; valódi törlés nincs |
+| `item_history` | „gyakran vett” javaslatok | tagok Lista pipával | csak `bump_history()` |
 | `pupils` | becenév, ikon, `theme` (`slate` / `rose` / `sky`) | szülő; a tablet a hozzá rendelteket | szülő; a tablet csak a hozzá rendelt gyerek `theme`-jét (`pupils_guard`) |
 | `results` | befejezett kör / minijáték-győzelem (`round`, `hangman`, `wordsearch`, `breakout`; csak hozzáfűzés) | szülő; a tablet a hozzá rendelteket | szülő / tablet; `recorded_by` a szerveré; törölni csak a szülő |
 | `pupil_badges` | jelvények | mint `results` | mint `results` |
@@ -74,6 +74,7 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 | `question_reports` | hibás feladat jelentése (a kérdés pillanatképe, okkód) | csak a szülő | beküldés: szülő / a hozzá rendelt tablet; `status`: szülő |
 | `chapter_access` | tantárgyanként az elérhető tankönyvi fejezetek kódjai (háztartásonként közös; ha nincs sor, minden elérhető) | szülő; a háztartás tabletje | csak a szülő |
 
+- „Szülő” ebben a táblában: háztartás-tag Gyakorló pipával (`private.is_parent()`).
 - Az `anon` szerep egyik táblán sem kap jogot. A segédfüggvények (`private.is_member`, `is_parent`, `list_household`, `pupil_household`, `is_device_for`) `security definer`-ek.
 - Párosítás: a kód 8 karakter, 10 percig él, egyszer használható; fiókonként 10 hibás próbálkozás után zár. A `claim_pairing` hibás kódnál nem kivételt dob, hanem `'invalid'`-ot ad, különben a számláló is visszagörgetődne.
 - Napi takarítás (`pg_cron`): 30 napnál régebben törölt tételek; párosítatlan vagy visszavont névtelen fiókok 24 óra után; lejárt párosító kódok.
@@ -119,7 +120,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 | munkamenet az aloldalak között | közös süti (`.laszlobiri.com`) |
 | használat belépés nélkül | nincs; böngészős kapu minden oldalon, a `/belepes/` és az `/adatvedelem/` kivételével. Szerveroldali védelem (más tárhely) elvetve. |
 | felhasználók | két szülő, egy `parent` szerep; további szerep egy migrációval vehető fel |
-| több oldal, más felhasználók (pl. lakótársak) | közös belépés, oldalankénti hozzáférés (`apps`); a családi adatot a háztartás-tagság védi; kezelés a `/admin/` oldalon (2026-11-17) |
+| több oldal, más felhasználók (pl. lakótársak) | közös belépés, oldalankénti hozzáférés (`apps`), az oldal-pipa az adatot is védi (szülő = háztartás-tag Gyakorló pipával); külön Család pipa nincs; kezelés a `/admin/` oldalon (2026-11-17) |
 | gyerekprofilok | kettő; a becenevek csak az adatbázisban, a repókban nem |
 | gyerekek saját eszköze | gyerek mód: névtelen, párosított eszközfiók, PIN-nel lehet kilépni |
 | listák | egy közös lista háztartásonként; közös gyorsjavaslatok |
@@ -143,7 +144,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 
 | parancs | mit ellenőriz |
 | --- | --- |
-| `npm run test:db` | pgTAP: allowlist és profil (001), közös lista (002), gyakorló és gyerek mód (003), színtéma (004), jelentések (005), falbontó-eredmény (006), elérhető fejezetek (007), oldalankénti hozzáférés és admin (008). Helyi Postgresen, Supabase-stubbal. |
+| `npm run test:db` | pgTAP: allowlist és profil (001), közös lista (002), gyakorló és gyerek mód (003), színtéma (004), jelentések (005), falbontó-eredmény (006), elérhető fejezetek (007), oldalankénti hozzáférés és admin (008), az oldal-pipa az adatot is védi (009). Helyi Postgresen, Supabase-stubbal. |
 | `npm run test:smoke` | böngészős próbák ál-Supabase-zel: belépés, kapu, oldalankénti hozzáférés és admin oldal (`login-smoke`), kéttelefonos listaszinkron (`list-sync-smoke`), gyakorló szülővel és tablettel (`practice-smoke`). A bevasarlo-lista és a gyakorlas repó a laszlobiri-com mellett legyen. |
 | `npm run check:rls` | az éles projekt a nyilvános kulccsal: bejelentkezés nélkül semmi nem olvasható és írható. Proxy mögött `NODE_USE_ENV_PROXY=1`. |
 

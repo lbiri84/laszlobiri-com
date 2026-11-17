@@ -19,7 +19,7 @@ function say(text, kind = '') { const m = $('msg'); m.textContent = text; m.data
 function errText(e) {
   const s = String(e?.message || e || '');
   if (/Érvénytelen e-mail/.test(s)) return 'Érvénytelen e-mail cím.';
-  if (/Saját magadat/.test(s)) return s.replace(/^.*?(Saját magadat[^.]*\.).*$/, '$1');
+  if (/Saját magad/.test(s)) return s.replace(/^.*?(Saját magad[^.]*\.).*$/, '$1');
   if (/megjegyzés/i.test(s)) return 'A megjegyzés legfeljebb 80 karakter.';
   if (/Csak admin/.test(s)) return 'Ehhez admin jog kell.';
   if (/fetch|network/i.test(s)) return 'Nincs kapcsolat. Próbáld újra.';
@@ -44,7 +44,6 @@ function row(r, i) {
   return `<tr data-i="${i}">
   <td class="addr"><div class="email">${esc(r.email)}</div>${r.app_role === 'admin' || self ? `<div>${r.app_role === 'admin' ? '<span class="pill">admin</span>' : ''}${self ? '<span class="pill">te</span>' : ''}</div>` : ''}<div class="who">${who}</div></td>
   ${SITES.map(s => box('app', s.app, (r.apps || []).includes(s.app), SHORT[s.app] || s.name)).join('')}
-  ${box('hh', '1', r.in_household, 'Családtag', self)}
   <td class="note"><input type="text" name="note" maxlength="80" value="${esc(r.note)}" aria-label="${esc(r.email)}: megjegyzés"></td>
   <td class="act"><button class="danger" type="button" data-remove${self ? ' disabled' : ''}>Visszavonás</button></td>
 </tr>`;
@@ -53,7 +52,7 @@ function row(r, i) {
 function render() {
   $('count').textContent = `(${rows.length})`;
   $('head').innerHTML = '<th>Cím</th>' + SITES.map(s => `<th${s.soon ? ' title="készül"' : ''}>${esc(SHORT[s.app] || s.name)}${s.soon ? '*' : ''}</th>`).join('')
-    + '<th>Család</th><th>Megjegyzés</th><th></th>';
+    + '<th>Megjegyzés</th><th></th>';
   $('list').innerHTML = rows.map(row).join('');
 }
 
@@ -64,8 +63,8 @@ async function load() {
   render();
 }
 
-async function save(email, apps, household, note) {
-  const { error } = await supabase.rpc('admin_access_set', { p_email: email, p_apps: apps, p_household: household, p_note: note || null });
+async function save(email, apps, note) {
+  const { error } = await supabase.rpc('admin_access_set', { p_email: email, p_apps: apps, p_note: note || null });
   if (error) throw error;
 }
 
@@ -90,7 +89,7 @@ async function init() {
     if (rows.some(r => r.email === email) && !confirm(`${email} már a listában van. Felülírod a beállításait?`)) return;
     f.querySelector('button').disabled = true;
     try {
-      await save(email, apps, $('addHh').checked, $('addNote').value.trim());
+      await save(email, apps, $('addNote').value.trim());
       f.reset();
       await load();
       say(`Hozzáadva: ${email}. Most már beléphet a Google-fiókjával.`);
@@ -102,12 +101,12 @@ async function init() {
   $('list').addEventListener('change', async e => {
     const tr = e.target.closest('tr');
     if (!tr || tr.classList.contains('busy')) return;
-    const r = rows[+tr.dataset.i], hh = tr.querySelector('input[name=hh]');
+    const r = rows[+tr.dataset.i];
     const note = tr.querySelector('input[name=note]').value.trim();
     tr.classList.add('busy');
-    tr.querySelectorAll('input').forEach(i => { i.dataset.dis = i.disabled ? '1' : ''; i.disabled = true; });
+    tr.querySelectorAll('input').forEach(i => { i.disabled = true; });
     try {
-      await save(r.email, checked(tr, 'app'), hh.dataset.dis ? r.in_household : hh.checked, note);
+      await save(r.email, checked(tr, 'app'), note);
       await load();
       say(`Mentve: ${r.email}.`);
     } catch (err) {
@@ -121,7 +120,7 @@ async function init() {
     const b = e.target.closest('button[data-remove]');
     if (!b) return;
     const r = rows[+b.closest('tr').dataset.i];
-    if (!confirm(`Visszavonod ${r.email} hozzáférését? A fiókja megmarad, de egyik oldalt sem nyithatja meg, és kikerül a családból.`)) return;
+    if (!confirm(`Visszavonod ${r.email} hozzáférését? A fiókja megmarad, de egyik oldalt sem nyithatja meg.`)) return;
     b.disabled = true;
     try {
       const { error } = await supabase.rpc('admin_access_remove', { p_email: r.email });
