@@ -33,6 +33,14 @@ const session = () => ({
 });
 
 const seen = [];
+// Oldalankénti hozzáférés: a my_access válasza, és az admin lista tartalma.
+const FAMILY = { apps: ['ebed', 'bevasarlas', 'gyakorlas'], admin: true };
+globalThis.access = FAMILY;
+const calls = [];
+const acl = [
+  { email: 'szulo@example.invalid', apps: ['ebed', 'bevasarlas', 'gyakorlas'], in_household: true, note: null, app_role: 'admin', display_name: 'Teszt Szülő', has_account: true, last_sign_in_at: '2026-11-17T08:00:00Z' },
+  { email: 'lako@example.invalid', apps: ['elszamolas'], in_household: false, note: '3. lakás', app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null },
+];
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, ORIGIN);
   seen.push(req.method + ' ' + u.pathname);
@@ -66,6 +74,30 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(USER));
   }
   if (u.pathname === '/auth/v1/logout') { res.writeHead(204); return res.end(); }
+  if (u.pathname === '/rest/v1/rpc/my_access') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify(globalThis.access));
+  }
+  if (u.pathname.startsWith('/rest/v1/rpc/admin_access_')) {
+    let body = ''; for await (const c of req) body += c;
+    const j = JSON.parse(body || '{}'), fn = u.pathname.slice('/rest/v1/rpc/'.length);
+    calls.push([fn, j]);
+    if (!globalThis.access.admin) {
+      res.writeHead(403, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ code: '42501', message: 'Csak admin.' }));
+    }
+    if (fn === 'admin_access_set') {
+      const r = acl.find(x => x.email === j.p_email);
+      if (r) Object.assign(r, { apps: j.p_apps, in_household: j.p_household, note: j.p_note });
+      else acl.push({ email: j.p_email, apps: j.p_apps, in_household: j.p_household, note: j.p_note, app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null });
+    }
+    if (fn === 'admin_access_remove') {
+      const k = acl.findIndex(x => x.email === j.p_email);
+      if (k >= 0) acl.splice(k, 1);
+    }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(fn === 'admin_access_list' ? JSON.stringify(acl) : 'null');
+  }
   if (u.pathname === '/rest/v1/profiles') {
     const row = { id: USER.id, display_name: 'Teszt Szülő', app_role: 'admin' };
     const single = /object/.test(req.headers.accept || '');
@@ -84,6 +116,8 @@ const server = http.createServer(async (req, res) => {
 await new Promise(r => server.listen(PORT, r));
 
 let failed = 0;
+// SHOTS=<mappa>: képernyőképek kézi szemrevételezéshez.
+const shot = async (pg, name) => { if (process.env.SHOTS) await pg.screenshot({ path: path.join(process.env.SHOTS, name + '.png'), fullPage: true }); };
 const check = (ok, msg) => { console.log((ok ? '  rendben  ' : '  HIBA     ') + msg); if (!ok) failed++; };
 
 const browser = await chromium.launch();
@@ -132,6 +166,64 @@ try {
   await page.goto(`${ORIGIN}/`);
   await page.waitForFunction(() => !document.getElementById('lb-gate') && getComputedStyle(document.documentElement).visibility === 'visible');
   check(new URL(page.url()).pathname === '/', 'kapu: belépve a főoldal megjelenik');
+
+  // ---- Oldalankénti hozzáférés
+  const sub = `${ORIGIN}/scripts/fixtures/aloldal-gyakorlas.html`;
+  const visible = sel => page.evaluate(s => { const e = document.querySelector(s); return !!e && !e.closest('[hidden]') && getComputedStyle(e).display !== 'none'; }, sel);
+  await page.waitForFunction(() => document.querySelectorAll('[data-app]:not([hidden])').length === 3);
+  check(await visible('#admin') && !(await visible('#noapps')), 'főoldal: a család mindhárom alkalmazást és a Hozzáférések linket látja');
+  await page.goto(sub);
+  await page.waitForFunction(() => getComputedStyle(document.documentElement).visibility === 'visible');
+  check(await visible('#content') && !(await page.$('#lb-denied')), 'aloldal: hozzáféréssel megnyílik');
+
+  globalThis.access = { apps: ['elszamolas'], admin: false };   // lakótárs; a megjegyzett döntés még a régi
+  await page.goto(sub);
+  await page.waitForSelector('#lb-denied', { timeout: 10000 });
+  check(/nincs hozzáférésed/.test(await page.textContent('#lb-denied')), 'aloldal: visszavonás után a háttérfrissítés lezárja');
+  await page.goto(sub);
+  await page.waitForSelector('#lb-denied', { timeout: 10000 });
+  check(!(await page.textContent('#lb-denied')).includes('Gyakorló'), 'aloldal: hozzáférés nélkül azonnal zár, a tiltott oldal linkje nélkül');
+  await shot(page, 'nincs-hozzaferes');
+  await page.goto(`${ORIGIN}/`);
+  await page.waitForFunction(() => !document.getElementById('noapps').hidden);
+  check(!(await visible('#admin')) && (await page.$$('[data-app]:not([hidden])')).length === 0, 'főoldal: lakótárs nem lát családi alkalmazást, sem admin linket');
+  await page.goto(`${ORIGIN}/admin/`);
+  await page.waitForFunction(() => /csak adminnak/.test(document.getElementById('msg').textContent));
+  check(!(await visible('#admin')), 'admin oldal: nem adminnak zárva');
+
+  // ---- Admin oldal
+  globalThis.access = FAMILY;
+  await page.goto(`${ORIGIN}/admin/`);
+  await page.waitForSelector('#list tr');
+  check((await page.$$('#list tr')).length === 2, 'admin: a címek listája');
+  check(await page.$eval('#list tr:first-child button[data-remove]', b => b.disabled) && await page.$eval('#list tr:first-child input[name=hh]', b => b.disabled),
+    'admin: saját magát nem vonhatja vissza, a családból sem veheti ki');
+  await page.fill('#addEmail', 'Uj.Lako@Example.invalid');
+  await page.check('#addApps input[value=elszamolas]');
+  await page.fill('#addNote', '5. lakás');
+  await page.click('#add button[type=submit]');
+  await page.waitForFunction(() => /Hozzáadva/.test(document.getElementById('msg').textContent));
+  const add = calls.find(c => c[0] === 'admin_access_set');
+  check(add && add[1].p_email === 'uj.lako@example.invalid' && add[1].p_apps.join() === 'elszamolas' && add[1].p_household === false && add[1].p_note === '5. lakás',
+    'admin: új lakótárs felvétele (kisbetűs cím, csak az elszámoló, család nélkül)');
+  check((await page.$$('#list tr')).length === 3, 'admin: a lista frissül');
+  await page.check('#list tr:nth-child(2) input[value=ebed]');
+  await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
+  check(acl[1].apps.includes('ebed') && acl[1].apps.includes('elszamolas'), 'admin: a pipa azonnal mentődik (oldal hozzáadása egy meglévő címhez)');
+  await page.evaluate(() => { document.getElementById('msg').textContent = ''; });
+  await page.fill('#list tr:nth-child(2) input[name=note]', '4. lakás');
+  await page.press('#list tr:nth-child(2) input[name=note]', 'Enter');
+  await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
+  check(acl[1].note === '4. lakás' && acl[1].apps.length === 2, 'admin: a megjegyzés Enterre mentődik, a pipák maradnak');
+  page.once('dialog', d => d.accept());
+  await page.click('#list tr:nth-child(3) button[data-remove]');
+  await page.waitForFunction(() => /Visszavonva/.test(document.getElementById('msg').textContent));
+  check(!acl.some(x => x.email === 'uj.lako@example.invalid') && (await page.$$('#list tr')).length === 2, 'admin: visszavonás megerősítés után');
+  await shot(page, 'admin');
+  await page.setViewportSize({ width: 390, height: 844 });
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'admin: telefonon nincs vízszintes oldalgörgetés (a táblázat görgethető)');
+  await shot(page, 'admin-telefon');
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   // Kilépés az aloldalon.
   await page.goto(target);

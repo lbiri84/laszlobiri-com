@@ -67,14 +67,17 @@ A titkok csak a `main` ágon futó munkafolyamatnak érhetők el; pull request (
 
 ## Új felhasználó
 
-Egy sor az `allowed_emails` táblába, a dashboard SQL Editorában (a címet ott írd be, ne fájlba):
-
-```sql
-insert into private.allowed_emails (email, household_id)
-select lower('UJ@PELDA.HU'), id from public.households where name = 'Család';
-```
+A `https://laszlobiri.com/admin/` oldalon (csak admin): e-mail cím, a megnyitható oldalak, és hogy családtag-e (a családtag látja a családi adatokat; lakótársnak ne). Ugyanott módosítható és visszavonható.
 
 Ha valaki a felvétele előtt próbált belépni, a belépése elutasítva lett (fiók nem jött létre); a felvétel után újra be kell lépnie.
+
+Az admin szerep csak SQL-lel adható (a dashboard SQL Editorában, a címet ott írd be):
+
+```sql
+update private.allowed_emails set app_role = 'admin' where email = lower('CIM@PELDA.HU');
+update public.profiles set app_role = 'admin'
+where id = (select id from auth.users where lower(email) = lower('CIM@PELDA.HU'));
+```
 
 ## Az éles projekt kézi beállításai (megtörtént; újrakezdéshez)
 

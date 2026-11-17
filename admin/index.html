@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="hu" data-theme="slate">
+<head>
+<meta charset="utf-8">
+<!-- Belépési kapu (lib/v1/gate.js). A beágyazott átirányító sor itt nincs (a CSP nem enged
+     beágyazott szkriptet); a gate.js munkamenet híján ugyanúgy a belépőoldalra visz. -->
+<style id="lb-gate">html{visibility:hidden}</style>
+<script type="module" src="/lib/v1/gate.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Ki melyik laszlobiri oldalhoz fér hozzá.">
+<meta name="theme-color" content="#293c4b">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://eokwxkrcttsoxfflvuus.supabase.co wss://eokwxkrcttsoxfflvuus.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Hozzáférések · laszlobiri</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="/design-system/tokens.css">
+<script type="module" src="/lib/v1/auth-badge.js"></script>
+<script type="module" src="/admin/admin.js"></script>
+<style>
+  /* A laszlobiri design system alapján (design-system/README.md). */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { background: var(--bg); }
+  body {
+    margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12);
+    max-width: 880px; min-height: 100vh; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--fg); font-family: var(--font-sans);
+    font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased;
+  }
+  .mk .l{fill:var(--mark-l)}.mk .b{fill:var(--mark-b)}
+  header.page { margin: clamp(8px, 4vw, 40px) 0 var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); align-items: flex-start; }
+  header.page a { display: block; }
+  .mk { width: 64px; height: auto; display: block; }
+  h1 { font-size: clamp(36px, 8vw, 44px); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  h2 { font-size: 20px; line-height: 28px; font-weight: 600; margin: var(--space-8) 0 var(--space-3); }
+  .sub { color: var(--fg-muted); margin: 0; max-width: 62ch; }
+  a { color: var(--accent-text); }
+  main { flex: 1; }
+
+  .card { background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-4); margin-bottom: var(--space-3); }
+  .card .email { font-weight: 600; overflow-wrap: anywhere; }
+  .card .who { font-size: 14px; line-height: 20px; color: var(--fg-muted); margin: 2px 0 var(--space-3); }
+  .pill { font-size: 12px; line-height: 18px; font-weight: 500; padding: 0 var(--space-2); margin-left: var(--space-2); border: 1px solid currentColor; border-radius: var(--radius-full); color: var(--accent-text); vertical-align: 2px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 var(--space-3); }
+  legend { font-size: 14px; line-height: 20px; color: var(--fg-muted); padding: 0; margin-bottom: var(--space-1); }
+  .checks { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); }
+  label.chk { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; cursor: pointer; }
+  label.chk input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
+  label.chk.dis { color: var(--fg-muted); cursor: default; }
+  .soon { font-size: 13px; color: var(--fg-muted); }
+  .field { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
+  .field span { font-size: 14px; line-height: 20px; color: var(--fg-muted); }
+  input[type=email], input[type=text] {
+    font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+    border-radius: var(--radius-md, 8px); padding: var(--space-2) var(--space-3); min-height: 44px; width: 100%;
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+  button { font: inherit; font-weight: 600; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--brand-black); border: 1px solid var(--accent); }
+  button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  button.danger { background: transparent; color: var(--accent-text); border: 1px solid var(--line); margin-left: auto; }
+  button:disabled { opacity: .5; cursor: default; }
+  .msg { min-height: 24px; margin: 0 0 var(--space-3); color: var(--fg-muted); }
+  .msg[data-kind=error] { color: var(--accent-text); }
+  .hint { font-size: 14px; line-height: 20px; color: var(--fg-muted); max-width: 62ch; }
+
+  /* A címek táblázata: soronként egy cím, mellette a jogok. Keskeny kijelzőn a táblázat
+     vízszintesen görgethető, az oldal nem. */
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg-raised); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 22px; }
+  th, td { padding: var(--space-2); border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  th { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--fg-muted); text-align: center; white-space: nowrap; }
+  /* A cím oszlop görgetéskor is a helyén marad. */
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--bg-raised); padding-left: var(--space-3); box-shadow: 1px 0 0 var(--line); }
+  td.c { text-align: center; }
+  td.c input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; vertical-align: middle; cursor: pointer; }
+  td.c input:disabled { cursor: default; }
+  td.addr { min-width: 170px; max-width: 240px; }
+  td.addr .email { font-weight: 600; overflow-wrap: anywhere; }
+  td.addr .pill { margin-left: 0; margin-right: var(--space-1); }
+  td.addr .who { font-size: 13px; line-height: 18px; color: var(--fg-muted); }
+  td.note input { width: 110px; min-height: 36px; padding: var(--space-1) var(--space-2); font-size: 15px; }
+  td.act { text-align: right; padding-right: var(--space-3); }
+  td.act button { min-height: 36px; padding: 0 var(--space-3); font-size: 14px; }
+  tr.busy { opacity: .6; }
+
+  footer { margin-top: var(--space-12); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--fg-muted); }
+  footer a { color: var(--fg-muted); }
+  @media (max-width: 640px) { body { padding-left: var(--space-4); padding-right: var(--space-4); } }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <a href="/" aria-label="laszlobiri főoldal"><svg class="mk" viewBox="4 6 86 88" role="img" aria-label="laszlobiri jel"><polygon class="l" points="4,8 18,8 18,92"/><polygon class="l" points="4,8 18,92 4,92" fill-opacity="0.8"/><polygon class="l" points="4,78 34,78 34,92" fill-opacity="0.9"/><polygon class="l" points="4,78 34,92 4,92" fill-opacity="0.72"/><polygon class="b" points="40,14 54,6 54,92"/><polygon class="b" points="40,14 54,92 40,92" fill-opacity="0.84"/><polygon class="b" points="70,70 54,46 76,46"/><polygon class="b" points="70,70 76,46 90,62" fill-opacity="0.74"/><polygon class="b" points="70,70 90,62 86,86" fill-opacity="0.9"/><polygon class="b" points="70,70 86,86 72,94" fill-opacity="0.66"/><polygon class="b" points="70,70 72,94 54,92" fill-opacity="0.82"/><polygon class="b" points="70,70 54,92 54,46" fill-opacity="0.95"/></svg></a>
+  <h1>Hozzáférések</h1>
+  <p class="sub">Ki léphet be, és melyik oldalt nyithatja meg.</p>
+</header>
+
+<main>
+  <p class="msg" id="msg" role="status" aria-live="polite">Betöltés…</p>
+
+  <section id="admin" hidden>
+    <h2>Új cím</h2>
+    <form class="card" id="add" novalidate>
+      <label class="field"><span>E-mail cím (Google-fiók)</span><input type="email" id="addEmail" autocomplete="off" required maxlength="254"></label>
+      <fieldset><legend>Oldalak</legend><div class="checks" id="addApps"></div></fieldset>
+      <fieldset><legend>Család</legend><div class="checks"><label class="chk"><input type="checkbox" id="addHh"> Családtag (látja a családi adatokat)</label></div></fieldset>
+      <label class="field"><span>Megjegyzés (nem kötelező, pl. „3. lakás”)</span><input type="text" id="addNote" maxlength="80"></label>
+      <div class="row"><button class="primary" type="submit">Hozzáadás</button></div>
+    </form>
+    <p class="hint">A felvett cím a Google-fiókjával léphet be, és csak a bepipált oldalakat nyithatja meg. A „Családtag” a bevásárlólistát és a gyakorló gyerekprofiljait is megnyitja: lakótársnak ne pipáld be.</p>
+
+    <h2>Engedélyezett címek <span class="soon" id="count"></span></h2>
+    <p class="hint">A pipák és a megjegyzés azonnal mentődnek. A *-gal jelölt oldal még készül.</p>
+    <div class="tbl"><table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="list"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<footer><span>laszlobiri.com · <a href="/adatvedelem/">Adatkezelés</a></span><lb-auth></lb-auth></footer>
+
+</body>
+</html>
