@@ -191,8 +191,8 @@ try {
   check(!(await page.textContent('#lb-denied')).includes('Gyakorló'), 'aloldal: hozzáférés nélkül azonnal zár, a tiltott oldal linkje nélkül');
   await shot(page, 'nincs-hozzaferes');
   await page.goto(`${ORIGIN}/`);
-  await page.waitForFunction(() => !document.getElementById('noapps').hidden);
-  check(!(await visible('#admin')) && (await page.$$('[data-app]:not([hidden])')).length === 0, 'főoldal: lakótárs nem lát családi alkalmazást, sem admin linket');
+  await page.waitForFunction(() => document.querySelectorAll('[data-app]:not([hidden])').length === 1);
+  check(!(await visible('#admin')) && await page.$eval('[data-app]:not([hidden])', e => e.dataset.app) === 'tarsashaz', 'főoldal: lakótárs csak a Társasházat látja, admin link nélkül');
   await page.goto(`${ORIGIN}/admin/`);
   await page.waitForFunction(() => /csak adminnak/.test(document.getElementById('msg').textContent));
   check(!(await visible('#admin')), 'admin oldal: nem adminnak zárva');
