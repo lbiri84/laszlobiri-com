@@ -17,6 +17,8 @@ insert into private.allowed_emails (email, household_id) values
   ('a2@example.invalid', 'aaaaaaaa-0000-0000-0000-000000000000'),
   ('b@example.invalid',  'bbbbbbbb-0000-0000-0000-000000000000'),
   ('c@example.invalid',  null);
+-- A családtagok a két családi oldalt is megkapják (lásd 008: az oldal-pipa az adatot is védi).
+update private.allowed_emails set apps = '{ebed,bevasarlas,gyakorlas}' where household_id is not null;
 insert into auth.users (id, email) values
   ('a1a1a1a1-0000-0000-0000-000000000000', 'a1@example.invalid'),
   ('a2a2a2a2-0000-0000-0000-000000000000', 'a2@example.invalid'),

@@ -99,7 +99,7 @@ await expectError('rpc create_pairing', sb.rpc('create_pairing', { p_pupils: ['0
 await expectError('rpc claim_pairing', sb.rpc('claim_pairing', { p_code: 'AAAA-AAAA' }));
 await expectError('rpc my_access', sb.rpc('my_access'));
 await expectError('rpc admin_access_list', sb.rpc('admin_access_list'));
-await expectError('rpc admin_access_set', sb.rpc('admin_access_set', { p_email: 'x@example.invalid', p_apps: ['ebed'], p_household: false }));
+await expectError('rpc admin_access_set', sb.rpc('admin_access_set', { p_email: 'x@example.invalid', p_apps: ['ebed'] }));
 await expectError('rpc admin_access_remove', sb.rpc('admin_access_remove', { p_email: 'x@example.invalid' }));
 await expectError('rpc bump_history', sb.rpc('bump_history', {
   p_household: '00000000-0000-0000-0000-000000000000', p_name_key: 'x', p_name: 'x', p_cat: 'egyeb',

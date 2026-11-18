@@ -9,6 +9,8 @@ select plan(3);
 
 insert into public.households (id, name) values ('aaaaaaaa-0000-0000-0000-000000000000', 'A háztartás');
 insert into private.allowed_emails (email, household_id) values ('a1@example.invalid', 'aaaaaaaa-0000-0000-0000-000000000000');
+-- A családtagok a két családi oldalt is megkapják (lásd 008: az oldal-pipa az adatot is védi).
+update private.allowed_emails set apps = '{ebed,bevasarlas,gyakorlas}' where household_id is not null;
 insert into auth.users (id, email) values ('a1a1a1a1-0000-0000-0000-000000000000', 'a1@example.invalid');
 insert into public.pupils (id, household_id, nickname) values ('11111111-0000-0000-0000-00000000000a', 'aaaaaaaa-0000-0000-0000-000000000000', 'Mókus');
 

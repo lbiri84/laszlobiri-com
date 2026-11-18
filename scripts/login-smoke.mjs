@@ -88,8 +88,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (fn === 'admin_access_set') {
       const r = acl.find(x => x.email === j.p_email);
-      if (r) Object.assign(r, { apps: j.p_apps, in_household: j.p_household, note: j.p_note });
-      else acl.push({ email: j.p_email, apps: j.p_apps, in_household: j.p_household, note: j.p_note, app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null });
+      if (r) Object.assign(r, { apps: j.p_apps, note: j.p_note });
+      else acl.push({ email: j.p_email, apps: j.p_apps, note: j.p_note, app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null });
     }
     if (fn === 'admin_access_remove') {
       const k = acl.findIndex(x => x.email === j.p_email);
@@ -196,16 +196,16 @@ try {
   await page.goto(`${ORIGIN}/admin/`);
   await page.waitForSelector('#list tr');
   check((await page.$$('#list tr')).length === 2, 'admin: a címek listája');
-  check(await page.$eval('#list tr:first-child button[data-remove]', b => b.disabled) && await page.$eval('#list tr:first-child input[name=hh]', b => b.disabled),
-    'admin: saját magát nem vonhatja vissza, a családból sem veheti ki');
+  check(await page.$eval('#list tr:first-child button[data-remove]', b => b.disabled), 'admin: saját magát nem vonhatja vissza');
+  check(!(await page.$('#list input[name=hh]')) && !(await page.$('#addHh')), 'admin: nincs külön Család pipa');
   await page.fill('#addEmail', 'Uj.Lako@Example.invalid');
   await page.check('#addApps input[value=elszamolas]');
   await page.fill('#addNote', '5. lakás');
   await page.click('#add button[type=submit]');
   await page.waitForFunction(() => /Hozzáadva/.test(document.getElementById('msg').textContent));
   const add = calls.find(c => c[0] === 'admin_access_set');
-  check(add && add[1].p_email === 'uj.lako@example.invalid' && add[1].p_apps.join() === 'elszamolas' && add[1].p_household === false && add[1].p_note === '5. lakás',
-    'admin: új lakótárs felvétele (kisbetűs cím, csak az elszámoló, család nélkül)');
+  check(add && add[1].p_email === 'uj.lako@example.invalid' && add[1].p_apps.join() === 'elszamolas' && !('p_household' in add[1]) && add[1].p_note === '5. lakás',
+    'admin: új lakótárs felvétele (kisbetűs cím, csak az elszámoló)');
   check((await page.$$('#list tr')).length === 3, 'admin: a lista frissül');
   await page.check('#list tr:nth-child(2) input[value=ebed]');
   await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));

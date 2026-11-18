@@ -67,7 +67,7 @@ A titkok csak a `main` ágon futó munkafolyamatnak érhetők el; pull request (
 
 ## Új felhasználó
 
-A `https://laszlobiri.com/admin/` oldalon (csak admin): e-mail cím, a megnyitható oldalak, és hogy családtag-e (a családtag látja a családi adatokat; lakótársnak ne). Ugyanott módosítható és visszavonható.
+A `https://laszlobiri.com/admin/` oldalon (csak admin): e-mail cím és a megnyitható oldalak. A Bevásárlólista a közös listához, a Gyakorló a szülői joghoz (gyerekprofilok, eredmények, tabletek) is hozzáférést ad; aki ezek egyikét megkapja, a háztartás tagja lesz. Lakótársnak csak az Elszámolást add. Ugyanott módosítható és visszavonható.
 
 Ha valaki a felvétele előtt próbált belépni, a belépése elutasítva lett (fiók nem jött létre); a felvétel után újra be kell lépnie.
 

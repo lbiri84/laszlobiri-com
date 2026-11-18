@@ -56,25 +56,25 @@ select is(pg_temp.q_as(:ADM, $$select (last_sign_in_at is not null) as x from pu
   '[{"x": true}]'::jsonb, 'lista: utolsó belépés');
 
 -- ---------------------------------------------------------------- admin felvétel / módosítás
-select is(pg_temp.err_as(:A2, $$select public.admin_access_set('uj@example.invalid', '{ebed}', false)$$), '42501', 'felvétel: nem admin nem vehet fel');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set(' Uj@Example.INVALID ', '{elszamolas,elszamolas}', false, 'Lakás 3')$$), 'ok', 'felvétel: admin felvesz egy lakótársat');
+select is(pg_temp.err_as(:A2, $$select public.admin_access_set('uj@example.invalid', '{ebed}')$$), '42501', 'felvétel: nem admin nem vehet fel');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set(' Uj@Example.INVALID ', '{elszamolas,elszamolas}', 'Lakás 3')$$), 'ok', 'felvétel: admin felvesz egy lakótársat');
 select is((select row(apps, household_id, note, app_role)::text from private.allowed_emails where email = 'uj@example.invalid'),
   row('{elszamolas}'::text[], null::uuid, 'Lakás 3', 'user')::text, 'felvétel: kisbetűs cím, egyedi oldallista, háztartás nélkül, user szerep');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('rossz', '{ebed}', false)$$), '22023', 'felvétel: érvénytelen cím');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('x@example.invalid', '{admin}', false)$$), '22023', 'felvétel: ismeretlen oldal');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('x@example.invalid', '{}', false, repeat('a', 81))$$), '22023', 'felvétel: túl hosszú megjegyzés');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('rossz', '{ebed}')$$), '22023', 'felvétel: érvénytelen cím');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('x@example.invalid', '{admin}')$$), '22023', 'felvétel: ismeretlen oldal');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('x@example.invalid', '{}', repeat('a', 81))$$), '22023', 'felvétel: túl hosszú megjegyzés');
 
--- Új cím háztartással: az első belépéskor a trigger teszi a háztartásba.
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('csalad@example.invalid', '{bevasarlas}', true)$$), 'ok', 'felvétel: családtag a háztartásba');
+-- Új cím családi oldallal: az első belépéskor a trigger teszi a háztartásba.
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('csalad@example.invalid', '{bevasarlas}')$$), 'ok', 'felvétel: a Lista pipa családtaggá teszi');
 insert into auth.users (id, email) values ('cacacaca-0000-0000-0000-000000000000', 'csalad@example.invalid');
 select is((select count(*)::int from public.household_members where user_id = 'cacacaca-0000-0000-0000-000000000000'), 1, 'felvétel: belépéskor háztartás-tag lett');
 
--- Meglévő fiók: a lakótárs háztartásba tétele és kivétele azonnal hat.
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{elszamolas}', true)$$), 'ok', 'módosítás: lakótárs a háztartásba (próba)');
+-- Meglévő fiók: a családi oldal megadása és elvétele azonnal hat a tagságra.
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{elszamolas,gyakorlas}')$$), 'ok', 'módosítás: Gyakorló pipa (próba)');
 select is((select count(*)::int from public.household_members where user_id = '1e1e1e1e-0000-0000-0000-000000000000'), 1, 'módosítás: tag lett');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{elszamolas}', false)$$), 'ok', 'módosítás: kivétel a háztartásból');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{elszamolas}')$$), 'ok', 'módosítás: a Gyakorló pipa lekerül');
 select is((select count(*)::int from public.household_members where user_id = '1e1e1e1e-0000-0000-0000-000000000000'), 0, 'módosítás: már nem tag');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('adm@example.invalid', '{ebed}', false)$$), '22023', 'módosítás: magát nem veheti ki a háztartásból');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('adm@example.invalid', '{ebed}')$$), '22023', 'módosítás: magánál a Lista vagy a Gyakorló marad');
 
 -- ---------------------------------------------------------------- visszavonás
 select is(pg_temp.err_as(:A2, $$select public.admin_access_remove('l@example.invalid')$$), '42501', 'visszavonás: nem admin nem vonhat vissza');

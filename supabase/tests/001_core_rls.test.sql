@@ -23,6 +23,8 @@ insert into private.allowed_emails (email, household_id, app_role) values
   ('a2@example.invalid', 'aaaaaaaa-0000-0000-0000-000000000000', 'user'),
   ('b@example.invalid',  'bbbbbbbb-0000-0000-0000-000000000000', 'user'),
   ('c@example.invalid',  null, 'user');
+-- A családtagok a két családi oldalt is megkapják (lásd 008: az oldal-pipa az adatot is védi).
+update private.allowed_emails set apps = '{ebed,bevasarlas,gyakorlas}' where household_id is not null;
 
 -- ---------------------------------------------------------------- hook
 select is(
