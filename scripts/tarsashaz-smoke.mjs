@@ -1,0 +1,290 @@
+#!/usr/bin/env node
+// A társasházi elszámoló füstpróbája, valódi Supabase nélkül.
+//
+// Egy memóriában dolgozó ál-PostgREST (th_* táblák és függvények) ugyanazokat az
+// ellenőrzéseket végzi, mint az adatbázis: a lakásrészek összege = a tétel összege, a
+// lezáráskor az utalások kiadják az egyenlegeket, írni csak a kezelő tud, az utalást a két
+// érintett lakás is jelölheti. A tarsashaz oldalt helyben szolgáljuk ki, a laszlobiri.com
+// kéréseit (lib/v1) a helyi fájlokra irányítjuk.
+//
+// Szereplők: kezelő (em-4) és egy lakó (fsz-2). A számpélda (kitalált): egy kéthavi
+// időszak víz-, szemét-, villany- és zsáktétellel, vízóra-leolvasással.
+//
+// Futtatás: node scripts/tarsashaz-smoke.mjs [a tarsashaz checkout útvonala]
+//           (alapértelmezés: ../tarsashaz). SHOTS=<mappa>: képernyőképek.
+
+import http from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
+
+const LB = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const APP = path.resolve(process.argv[2] || path.join(LB, '..', 'tarsashaz'));
+const MOCK = 'http://localhost:8775', SITE = 'http://localhost:8777';
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png' };
+const FLATS = ['fsz-1', 'fsz-2', 'em-3', 'em-4'];
+
+// ---------------------------------------------------------------- ál-adatbázis
+const K = 'k0k0k0k0-0000-0000-0000-000000000000', L = 'l2l2l2l2-0000-0000-0000-000000000000';
+const WHO = { [K]: { flat: 'em-4', manager: true }, [L]: { flat: 'fsz-2', manager: false } };
+const T = { th_flats: [], th_residents: [], th_periods: [], th_readings: [], th_items: [], th_item_shares: [], th_transfers: [] };
+const uuid = () => crypto.randomUUID();
+const err = (status, code, message) => ({ status, body: { code, message } });
+
+function balances(pid) {
+  const bal = Object.fromEntries(FLATS.map(f => [f, 0]));
+  for (const it of T.th_items.filter(i => i.period_id === pid)) {
+    bal[it.paid_by] += it.amount;
+    for (const s of T.th_item_shares.filter(s => s.item_id === it.id)) bal[s.flat] -= s.amount;
+  }
+  return bal;
+}
+
+function rpc(fn, p, who) {
+  const mgr = who?.manager;
+  const needMgr = () => (mgr ? null : err(403, '42501', 'Csak a kezelő módosíthat.'));
+  const open = pid => T.th_periods.find(x => x.id === pid && x.status === 'open');
+  switch (fn) {
+    case 'th_me': return { status: 200, body: who || { flat: null, manager: false } };
+    case 'th_save_flats': {
+      if (needMgr()) return needMgr();
+      const tot = FLATS.reduce((a, f) => a + Number(p.p[f]), 0);
+      if (tot !== 10000) return err(400, '22023', 'A négy lakás tulajdoni hányadának összege 10 000 legyen.');
+      T.th_flats = FLATS.map((f, i) => ({ code: f, share: Number(p.p[f]), sort: i + 1 }));
+      return { status: 200, body: null };
+    }
+    case 'th_save_residents': {
+      if (needMgr()) return needMgr();
+      for (const f of FLATS) { T.th_residents = T.th_residents.filter(r => !(r.flat === f && r.valid_from === p.p_valid_from)); T.th_residents.push({ flat: f, valid_from: p.p_valid_from, count: Number(p.p_counts[f]) }); }
+      return { status: 200, body: null };
+    }
+    case 'th_open_period': {
+      if (needMgr()) return needMgr();
+      if (T.th_periods.some(x => x.status === 'open')) return err(400, '22023', 'Már van nyitott időszak.');
+      const id = uuid(); T.th_periods.push({ id, name: p.p_name, starts_on: p.p_starts_on, ends_on: null, status: 'open', closed_at: null, note: null, created_at: new Date().toISOString() });
+      return { status: 200, body: id };
+    }
+    case 'th_save_item': {
+      if (needMgr()) return needMgr();
+      const it = p.p;
+      if (!open(it.period_id)) return err(400, '22023', 'Az időszak le van zárva.');
+      const tot = Object.values(it.shares).reduce((a, v) => a + Number(v), 0);
+      if (tot !== it.amount) return err(400, '22023', `A lakásrészek összege (${tot}) nem egyezik a tétel összegével (${it.amount}).`);
+      if (Object.entries(it.shares).some(([f, v]) => v && !it.participants.includes(f))) return err(400, '22023', 'Csak beszálló lakásnak lehet része.');
+      const { shares, ...row } = it;
+      T.th_items = T.th_items.filter(x => x.id !== it.id); T.th_items.push({ ...row, created_at: new Date().toISOString() });
+      T.th_item_shares = T.th_item_shares.filter(s => s.item_id !== it.id);
+      for (const [f, v] of Object.entries(shares)) if (v) T.th_item_shares.push({ item_id: it.id, flat: f, amount: v });
+      return { status: 200, body: it.id };
+    }
+    case 'th_delete_item': {
+      if (needMgr()) return needMgr();
+      T.th_items = T.th_items.filter(x => x.id !== p.p_id); T.th_item_shares = T.th_item_shares.filter(s => s.item_id !== p.p_id);
+      return { status: 200, body: null };
+    }
+    case 'th_save_reading': {
+      if (needMgr()) return needMgr();
+      const r = { id: p.p.id || uuid(), note: null, ...p.p };
+      T.th_readings = T.th_readings.filter(x => x.id !== r.id); T.th_readings.push(r);
+      return { status: 200, body: r.id };
+    }
+    case 'th_close_period': {
+      if (needMgr()) return needMgr();
+      const bal = balances(p.p_id);
+      for (const f of FLATS) {
+        const net = p.p_transfers.filter(t => t.to === f).reduce((a, t) => a + t.amount, 0) - p.p_transfers.filter(t => t.from === f).reduce((a, t) => a + t.amount, 0);
+        if (net !== bal[f]) return err(400, '22023', `Az utalások nem adják ki a(z) ${f} egyenlegét.`);
+      }
+      for (const t of p.p_transfers) T.th_transfers.push({ id: uuid(), period_id: p.p_id, from_flat: t.from, to_flat: t.to, amount: t.amount, paid_at: null });
+      Object.assign(T.th_periods.find(x => x.id === p.p_id), { status: 'closed', closed_at: new Date().toISOString() });
+      return { status: 200, body: null };
+    }
+    case 'th_mark_transfer': {
+      const t = T.th_transfers.find(x => x.id === p.p_id);
+      if (!(mgr || [t.from_flat, t.to_flat].includes(who?.flat))) return err(403, '42501', 'Ezt az utalást nem jelölheted.');
+      t.paid_at = p.p_paid ? new Date().toISOString() : null;
+      return { status: 200, body: null };
+    }
+  }
+  return err(404, 'PGRST202', 'nincs ilyen függvény: ' + fn);
+}
+
+const whoOf = req => { try { return WHO[JSON.parse(Buffer.from(req.headers.authorization.split(' ')[1].split('.')[1], 'base64url')).sub]; } catch { return null; } };
+const mock = http.createServer(async (req, res) => {
+  const u = new URL(req.url, MOCK);
+  const h = { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
+  const send = (status, body) => { res.writeHead(status, h); res.end(body == null ? '' : JSON.stringify(body)); };
+  if (req.method === 'OPTIONS') return send(204);
+  let raw = ''; for await (const c of req) raw += c;
+  if (u.pathname === '/auth/v1/user') return send(200, { id: K });
+  if (u.pathname === '/rest/v1/profiles') return send(200, [{ id: 'x', display_name: 'Teszt', app_role: 'user' }]);
+  if (u.pathname.startsWith('/rest/v1/rpc/')) { const r = rpc(u.pathname.slice(13), raw ? JSON.parse(raw) : {}, whoOf(req)); return send(r.status, r.body); }
+  const t = u.pathname.slice(9);
+  if (T[t]) {
+    if (req.method !== 'GET') return send(403, { code: '42501', message: 'permission denied' });
+    let rows = [...T[t]];
+    const o = u.searchParams.get('order');
+    if (o) { const [c, dir] = o.split('.'); rows.sort((a, b) => String(a[c]).localeCompare(String(b[c]), 'hu', { numeric: true }) * (dir === 'desc' ? -1 : 1)); }
+    return send(200, rows);
+  }
+  send(404, {});
+});
+await new Promise(r => mock.listen(8775, r));
+
+const site = http.createServer(async (req, res) => {
+  let f = path.join(APP, decodeURIComponent(new URL(req.url, SITE).pathname));
+  if (f.endsWith('/')) f += 'index.html';
+  try { const d = await readFile(f); res.writeHead(200, { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(d); }
+  catch { res.writeHead(404); res.end(); }
+});
+await new Promise(r => site.listen(8777, r));
+
+// ---------------------------------------------------------------- böngésző
+const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+const now = () => Math.floor(Date.now() / 1000);
+const sessionFor = id => ({ access_token: `${b64({ alg: 'HS256' })}.${b64({ sub: id, role: 'authenticated', exp: now() + 3600 })}.sig`, token_type: 'bearer', expires_in: 3600,
+  expires_at: now() + 3600, refresh_token: 'r', user: { id, aud: 'authenticated', role: 'authenticated', email: 'x@example.invalid', user_metadata: { name: 'Teszt' } } });
+
+let failed = 0;
+const check = (ok, m) => { console.log((ok ? '  rendben  ' : '  HIBA     ') + m); if (!ok) failed++; };
+const shot = async (page, name) => { if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, name + '.png'), fullPage: true }); };
+
+const browser = await chromium.launch();
+async function phone(id) {
+  const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 800 }, deviceScaleFactor: process.env.SHOTS ? 2 : 1 });
+  await ctx.route('https://fonts.googleapis.com/**', r => r.abort());
+  await ctx.route('https://laszlobiri.com/**', async r => {
+    const u = new URL(r.request().url());
+    if (u.pathname === '/lib/v1/config.js') return r.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: `export const SUPABASE_URL='${MOCK}';export const SUPABASE_ANON_KEY='anon';export const isConfigured=true;` });
+    try { r.fulfill({ body: await readFile(path.join(LB, u.pathname)), contentType: TYPES[path.extname(u.pathname)], headers: { 'access-control-allow-origin': '*' } }); } catch { r.fulfill({ status: 404 }); }
+  });
+  await ctx.addCookies([{ name: 'sb-localhost-auth-token', value: 'base64-' + b64(sessionFor(id)), domain: 'localhost', path: '/' }]);
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', e => page.errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fonts/.test(m.text())) page.errors.push(m.text()); });
+  return { ctx, page };
+}
+const msgIs = (page, re) => page.waitForFunction(r => new RegExp(r).test(document.getElementById('msg')?.textContent || ''), re.source, { timeout: 10000 });
+const sharesOf = name => { const it = T.th_items.find(i => i.name === name); return FLATS.map(f => T.th_item_shares.find(s => s.item_id === it?.id && s.flat === f)?.amount || 0); };
+
+try {
+  const A = await phone(K);
+  const p = A.page;
+  await p.goto(SITE + '/');
+  await p.waitForSelector('#tabs:not([hidden])');
+  check(/Nincs nyitott időszak/.test(await p.textContent('#app')), 'kezdetben nincs nyitott időszak');
+  check(await p.textContent('#me') === 'em-4 · kezelő', 'fejléc: em-4 · kezelő');
+
+  // Beállítások
+  await p.goto(SITE + '/#/beallitasok');
+  await p.waitForSelector('#flatsForm');
+  for (const [f, v] of [['fsz-1', 1911], ['fsz-2', 1911], ['em-3', 3089], ['em-4', 3000]]) await p.fill(`#flatsForm [name="${f}"]`, String(v));
+  await p.click('#flatsForm button');
+  await msgIs(p, /10 000/);
+  check(true, 'hányad: a 10 000-től eltérő összeget elutasítja');
+  await p.fill('#flatsForm [name="em-4"]', '3089'); await p.click('#flatsForm button');
+  await msgIs(p, /Tulajdoni hányad mentve/);
+  await p.fill('#resForm [name=valid_from]', '2025-07-01');
+  for (const [f, v] of [['fsz-1', 1], ['fsz-2', 4], ['em-3', 4], ['em-4', 4]]) await p.fill(`#resForm [name="${f}"]`, String(v));
+  await p.click('#resForm button');
+  await msgIs(p, /Lakók száma mentve/);
+  check(T.th_flats.length === 4 && T.th_residents.length === 4, 'hányad és létszám mentve');
+
+  // Vízóra: két leolvasás
+  for (const [d, main, a, b, c, e] of [['2026-08-03', 1246, 212, 604, 577, 630], ['2026-10-12', 1284, 215, 614, 586, 640]]) {
+    await p.goto(SITE + '/#/viz/uj'); await p.waitForSelector('#readingForm');
+    await p.fill('[name=read_on]', d); await p.fill('[name=main]', String(main));
+    for (const [k, v] of [['fsz1', a], ['fsz2', b], ['em3', c], ['em4', e]]) await p.fill(`[name=${k}]`, String(v));
+    await p.click('#readingForm button[type=submit]');
+    await msgIs(p, /Leolvasás mentve/);
+  }
+  check(T.th_readings.length === 2, 'két leolvasás mentve');
+  check(/6\s*m³/.test(await p.textContent('#app')), 'vízóra: a kerti csap 6 m³ (38 − 32)');
+
+  // Új időszak
+  await p.goto(SITE + '/#/idoszakok'); await p.waitForSelector('#newPeriod');
+  await p.fill('#newPeriod [name=name]', '2026. szeptember–október'); await p.fill('#newPeriod [name=starts_on]', '2026-09-01');
+  await p.click('#newPeriod button');
+  await msgIs(p, /Az időszak elindult/);
+
+  // Tételek
+  async function addItem(name, cat, amount, payer, method) {
+    await p.goto(SITE + '/#/tetel/uj'); await p.waitForSelector('#itemForm');
+    await p.fill('#itemForm [name=name]', name);
+    await p.click(`#itemForm label:has([name=category][value=${cat}])`);
+    await p.fill('#itemForm [name=amount]', String(amount));
+    await p.click(`#itemForm label:has([name=paid_by][value="${payer}"])`);
+    await p.click(`#itemForm label:has([name=method][value=${method}])`);
+    await p.click('#itemForm button[type=submit]');
+    await msgIs(p, /Mentve/);
+  }
+  await addItem('Víz és csatorna', 'viz', 48620, 'fsz-1', 'viz');
+  check(JSON.stringify(sharesOf('Víz és csatorna')) === '[4558,15194,13674,15194]', 'víz: a fogyasztás arányában (3 : 10 : 9 : 10 m³), pontosan 48 620 Ft');
+  await addItem('Szemétszállítás', 'szemet', 31200, 'fsz-1', 'letszam');
+  check(JSON.stringify(sharesOf('Szemétszállítás')) === '[2400,9600,9600,9600]', 'szemét: lakók száma szerint (1 : 4 : 4 : 4)');
+  await addItem('Közös villany', 'villany', 8940, 'fsz-1', 'hanyad');
+  check(JSON.stringify(sharesOf('Közös villany')) === '[1708,1708,2762,2762]', 'villany: tulajdoni hányad szerint, kerekítve is 8 940 Ft');
+  await addItem('Zöldhulladék-zsák', 'egyeb', 2760, 'em-4', 'egyenlo');
+  check(JSON.stringify(sharesOf('Zöldhulladék-zsák')) === '[690,690,690,690]', 'zsák: egyenlő részben');
+
+  // Részleges beszállás: csak em-3 és em-4, tulajdoni hányad szerint → fele-fele
+  await p.goto(SITE + '/#/tetel/uj'); await p.waitForSelector('#itemForm');
+  await p.fill('#itemForm [name=name]', 'Lépcsőház festék'); await p.fill('#itemForm [name=amount]', '10001');
+  await p.click('#itemForm label:has([name=participants][value="fsz-1"])'); await p.click('#itemForm label:has([name=participants][value="fsz-2"])');
+  check(/5\s*001\s*Ft/.test(await p.textContent('.split')) && /5\s*000\s*Ft/.test(await p.textContent('.split')), 'részleges beszállás: az előnézet fele-fele, a kerekítés pontos');
+  await shot(p, 'tarsashaz-uj-tetel');
+  await p.click('#itemForm button[type=submit]'); await msgIs(p, /Mentve/);
+  check(JSON.stringify(sharesOf('Lépcsőház festék')) === '[0,0,5001,5000]', 'részleges beszállás mentve');
+  // ... és törlés
+  await p.goto(SITE + '/#/tetel/' + T.th_items.find(i => i.name === 'Lépcsőház festék').id); await p.waitForSelector('#itemForm');
+  p.once('dialog', d => d.accept());
+  await p.click('[data-act=delitem]'); await msgIs(p, /Törölve/);
+  check(!T.th_items.some(i => i.name === 'Lépcsőház festék'), 'tétel törlése');
+
+  await shot(p, 'tarsashaz-idoszak');
+  // Lezárás
+  await p.click('[data-act=preclose]');
+  await p.waitForSelector('[data-act=close]');
+  await p.click('[data-act=close]');
+  await msgIs(p, /Lezárva/);
+  const tr = T.th_transfers.map(t => `${t.from_flat}>${t.to_flat}:${t.amount}`).sort().join(' ');
+  check(tr === 'em-3>fsz-1:26726 em-4>fsz-1:25486 fsz-2>fsz-1:27192', 'lezárás: három utalás fsz-1 felé (' + tr + ')');
+  check(/fsz-2 → fsz-1: 27\s*192\s*Ft/.test(await p.textContent('#chat')), 'chat-szöveg az utalásokkal');
+  await shot(p, 'tarsashaz-lezarva');
+
+  // Lakó (fsz-2)
+  const B = await phone(L);
+  const q = B.page;
+  await q.goto(SITE + '/');
+  await q.waitForSelector('#tabs:not([hidden])');
+  check(/27\s*192\s*Ft/.test(await q.textContent('.hero')) && /fsz-1/.test(await q.textContent('.hero')), 'lakó: az áttekintésen a saját utalása (27 192 Ft fsz-1-nek)');
+  check(!(await q.$('a[href="#/tetel/uj"]')) && !(await q.$('a[href="#/viz/uj"]')), 'lakó: nincs szerkesztő gomb');
+  await shot(q, 'tarsashaz-lako');
+  await q.click('.hero');
+  await q.waitForSelector('[data-paid]');
+  const boxes = await q.$$eval('[data-paid]', els => els.map(e => [e.closest('.tr').textContent.replace(/\s+/g, ' ').trim(), e.disabled]));
+  check(boxes.filter(b => !b[1]).length === 1 && /fsz-2/.test(boxes.find(b => !b[1])[0]), 'lakó: csak a saját utalását jelölheti');
+  await q.check('[data-paid]:not([disabled])');
+  await msgIs(q, /Megérkezettnek jelölve/);
+  check(T.th_transfers.find(t => t.from_flat === 'fsz-2').paid_at, 'lakó: az utalás megérkezettnek jelölve');
+  await q.goto(SITE + '/#/idoszakok'); await q.waitForSelector('.card');
+  check(/lezárva, 2 utalás vár/.test(await q.textContent('#app')), 'időszakok: „lezárva, 2 utalás vár”');
+
+  // Kimutatás
+  await p.goto(SITE + '/#/kimutatas'); await p.waitForSelector('.hbar');
+  check(/91\s*520\s*Ft/.test(await p.textContent('#app')), 'kimutatás: az éves összeg 91 520 Ft');
+  await shot(p, 'tarsashaz-kimutatas');
+
+  check(p.errors.length === 0 && q.errors.length === 0, 'nincs JavaScript-hiba' + (p.errors.length + q.errors.length ? ': ' + [...p.errors, ...q.errors].join(' | ') : ''));
+} catch (e) {
+  failed++;
+  console.log('  HIBA     ' + e.message);
+} finally {
+  await browser.close(); mock.close(); site.close();
+}
+console.log(failed ? `\n${failed} ellenőrzés elbukott.` : '\nMinden ellenőrzés rendben.');
+process.exit(failed ? 1 : 0);
