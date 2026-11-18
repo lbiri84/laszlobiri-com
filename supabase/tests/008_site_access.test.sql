@@ -17,7 +17,7 @@ insert into public.households (id, name) values ('aaaaaaaa-0000-0000-0000-000000
 insert into private.allowed_emails (email, household_id, app_role, apps) values
   ('adm@example.invalid', 'aaaaaaaa-0000-0000-0000-000000000000', 'admin', '{ebed,bevasarlas,gyakorlas}'),
   ('a2@example.invalid',  'aaaaaaaa-0000-0000-0000-000000000000', 'user',  '{bevasarlas,gyakorlas}'),
-  ('l@example.invalid',   null, 'user', '{elszamolas}');
+  ('l@example.invalid',   null, 'user', '{tarsashaz}');
 insert into auth.users (id, email, last_sign_in_at) values
   ('adadadad-0000-0000-0000-000000000000', 'adm@example.invalid', now()),
   ('a2a2a2a2-0000-0000-0000-000000000000', 'a2@example.invalid', null),
@@ -33,7 +33,7 @@ insert into auth.users (id, is_anonymous) values ('7a7a7a7a-0000-0000-0000-00000
 select is(pg_temp.q_as(:ADM, 'select public.my_access() as a') -> 0 -> 'a',
   '{"apps": ["ebed", "bevasarlas", "gyakorlas"], "admin": true}'::jsonb, 'my_access: admin, minden családi oldal');
 select is(pg_temp.q_as(:L, 'select public.my_access() as a') -> 0 -> 'a',
-  '{"apps": ["elszamolas"], "admin": false}'::jsonb, 'my_access: lakótárs csak az elszámolót (nagybetűs cím is)');
+  '{"apps": ["tarsashaz"], "admin": false}'::jsonb, 'my_access: lakótárs csak az elszámolót (nagybetűs cím is)');
 select is(pg_temp.q_as(:T, 'select public.my_access() as a') -> 0 -> 'a',
   '{"apps": [], "admin": false}'::jsonb, 'my_access: tablet: üres');
 select is(pg_temp.err_as(null, 'select public.my_access()'), '42501', 'my_access: anon nem hívhatja');
@@ -57,9 +57,9 @@ select is(pg_temp.q_as(:ADM, $$select (last_sign_in_at is not null) as x from pu
 
 -- ---------------------------------------------------------------- admin felvétel / módosítás
 select is(pg_temp.err_as(:A2, $$select public.admin_access_set('uj@example.invalid', '{ebed}')$$), '42501', 'felvétel: nem admin nem vehet fel');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set(' Uj@Example.INVALID ', '{elszamolas,elszamolas}', 'Lakás 3')$$), 'ok', 'felvétel: admin felvesz egy lakótársat');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set(' Uj@Example.INVALID ', '{tarsashaz,tarsashaz}', 'Lakás 3')$$), 'ok', 'felvétel: admin felvesz egy lakótársat');
 select is((select row(apps, household_id, note, app_role)::text from private.allowed_emails where email = 'uj@example.invalid'),
-  row('{elszamolas}'::text[], null::uuid, 'Lakás 3', 'user')::text, 'felvétel: kisbetűs cím, egyedi oldallista, háztartás nélkül, user szerep');
+  row('{tarsashaz}'::text[], null::uuid, 'Lakás 3', 'user')::text, 'felvétel: kisbetűs cím, egyedi oldallista, háztartás nélkül, user szerep');
 select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('rossz', '{ebed}')$$), '22023', 'felvétel: érvénytelen cím');
 select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('x@example.invalid', '{admin}')$$), '22023', 'felvétel: ismeretlen oldal');
 select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('x@example.invalid', '{}', repeat('a', 81))$$), '22023', 'felvétel: túl hosszú megjegyzés');
@@ -70,9 +70,9 @@ insert into auth.users (id, email) values ('cacacaca-0000-0000-0000-000000000000
 select is((select count(*)::int from public.household_members where user_id = 'cacacaca-0000-0000-0000-000000000000'), 1, 'felvétel: belépéskor háztartás-tag lett');
 
 -- Meglévő fiók: a családi oldal megadása és elvétele azonnal hat a tagságra.
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{elszamolas,gyakorlas}')$$), 'ok', 'módosítás: Gyakorló pipa (próba)');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{tarsashaz,gyakorlas}')$$), 'ok', 'módosítás: Gyakorló pipa (próba)');
 select is((select count(*)::int from public.household_members where user_id = '1e1e1e1e-0000-0000-0000-000000000000'), 1, 'módosítás: tag lett');
-select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{elszamolas}')$$), 'ok', 'módosítás: a Gyakorló pipa lekerül');
+select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('l@example.invalid', '{tarsashaz}')$$), 'ok', 'módosítás: a Gyakorló pipa lekerül');
 select is((select count(*)::int from public.household_members where user_id = '1e1e1e1e-0000-0000-0000-000000000000'), 0, 'módosítás: már nem tag');
 select is(pg_temp.err_as(:ADM, $$select public.admin_access_set('adm@example.invalid', '{ebed}')$$), '22023', 'módosítás: magánál a Lista vagy a Gyakorló marad');
 
