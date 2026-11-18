@@ -6,7 +6,7 @@
   "scripts": {
     "build:lib": "esbuild lib/build/entry.js --bundle --format=esm --target=es2020 --minify --legal-comments=eof \"--banner:js=/* Generált fájl (lib/build/entry.js, npm run build:lib). @supabase/supabase-js 2.118.0 és @supabase/ssr 0.12.7, MIT licenc. Ne szerkeszd kézzel. */\" --outfile=lib/v1/supabase.js",
     "test:db": "scripts/test-db.sh",
-    "test:smoke": "node scripts/login-smoke.mjs && node scripts/list-sync-smoke.mjs && node scripts/practice-smoke.mjs",
+    "test:smoke": "node scripts/login-smoke.mjs && node scripts/list-sync-smoke.mjs && node scripts/practice-smoke.mjs && node scripts/tarsashaz-smoke.mjs",
     "check:rls": "node scripts/rls-check.mjs"
   },
   "devDependencies": {

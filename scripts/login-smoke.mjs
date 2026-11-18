@@ -39,7 +39,7 @@ globalThis.access = FAMILY;
 const calls = [];
 const acl = [
   { email: 'szulo@example.invalid', apps: ['ebed', 'bevasarlas', 'gyakorlas'], in_household: true, note: null, app_role: 'admin', display_name: 'Teszt Szülő', has_account: true, last_sign_in_at: '2026-11-17T08:00:00Z' },
-  { email: 'lako@example.invalid', apps: ['elszamolas'], in_household: false, note: '3. lakás', app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null },
+  { email: 'lako@example.invalid', apps: ['tarsashaz'], in_household: false, note: '3. lakás', app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null },
 ];
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, ORIGIN);
@@ -77,6 +77,12 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/rest/v1/rpc/my_access') {
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(JSON.stringify(globalThis.access));
+  }
+  if (u.pathname === '/rest/v1/rpc/admin_set_flat') {
+    let body = ''; for await (const c of req) body += c;
+    const j = JSON.parse(body || '{}'); calls.push(['admin_set_flat', j]);
+    const r = acl.find(x => x.email === j.p_email); if (r) Object.assign(r, { flat: j.p_flat, th_manager: j.p_manager });
+    res.writeHead(200, { 'content-type': 'application/json' }); return res.end('null');
   }
   if (u.pathname.startsWith('/rest/v1/rpc/admin_access_')) {
     let body = ''; for await (const c of req) body += c;
@@ -176,7 +182,7 @@ try {
   await page.waitForFunction(() => getComputedStyle(document.documentElement).visibility === 'visible');
   check(await visible('#content') && !(await page.$('#lb-denied')), 'aloldal: hozzáféréssel megnyílik');
 
-  globalThis.access = { apps: ['elszamolas'], admin: false };   // lakótárs; a megjegyzett döntés még a régi
+  globalThis.access = { apps: ['tarsashaz'], admin: false };   // lakótárs; a megjegyzett döntés még a régi
   await page.goto(sub);
   await page.waitForSelector('#lb-denied', { timeout: 10000 });
   check(/nincs hozzáférésed/.test(await page.textContent('#lb-denied')), 'aloldal: visszavonás után a háttérfrissítés lezárja');
@@ -199,22 +205,27 @@ try {
   check(await page.$eval('#list tr:first-child button[data-remove]', b => b.disabled), 'admin: saját magát nem vonhatja vissza');
   check(!(await page.$('#list input[name=hh]')) && !(await page.$('#addHh')), 'admin: nincs külön Család pipa');
   await page.fill('#addEmail', 'Uj.Lako@Example.invalid');
-  await page.check('#addApps input[value=elszamolas]');
+  await page.check('#addApps input[value=tarsashaz]');
   await page.fill('#addNote', '5. lakás');
   await page.click('#add button[type=submit]');
   await page.waitForFunction(() => /Hozzáadva/.test(document.getElementById('msg').textContent));
   const add = calls.find(c => c[0] === 'admin_access_set');
-  check(add && add[1].p_email === 'uj.lako@example.invalid' && add[1].p_apps.join() === 'elszamolas' && !('p_household' in add[1]) && add[1].p_note === '5. lakás',
+  check(add && add[1].p_email === 'uj.lako@example.invalid' && add[1].p_apps.join() === 'tarsashaz' && !('p_household' in add[1]) && add[1].p_note === '5. lakás',
     'admin: új lakótárs felvétele (kisbetűs cím, csak az elszámoló)');
   check((await page.$$('#list tr')).length === 3, 'admin: a lista frissül');
   await page.check('#list tr:nth-child(2) input[value=ebed]');
   await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
-  check(acl[1].apps.includes('ebed') && acl[1].apps.includes('elszamolas'), 'admin: a pipa azonnal mentődik (oldal hozzáadása egy meglévő címhez)');
+  check(acl[1].apps.includes('ebed') && acl[1].apps.includes('tarsashaz'), 'admin: a pipa azonnal mentődik (oldal hozzáadása egy meglévő címhez)');
   await page.evaluate(() => { document.getElementById('msg').textContent = ''; });
   await page.fill('#list tr:nth-child(2) input[name=note]', '4. lakás');
   await page.press('#list tr:nth-child(2) input[name=note]', 'Enter');
   await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
   check(acl[1].note === '4. lakás' && acl[1].apps.length === 2, 'admin: a megjegyzés Enterre mentődik, a pipák maradnak');
+  check(await page.$eval('#list tr:first-child select[name=flat]', e => e.disabled), 'admin: társasház nélkül a lakás nem választható');
+  await page.evaluate(() => { document.getElementById('msg').textContent = ''; });
+  await page.selectOption('#list tr:nth-child(2) select[name=flat]', 'em-3');
+  await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
+  check(acl[1].flat === 'em-3' && acl[1].th_manager === false, 'admin: a lakótárs lakása beállítható (em-3)');
   page.once('dialog', d => d.accept());
   await page.click('#list tr:nth-child(3) button[data-remove]');
   await page.waitForFunction(() => /Visszavonva/.test(document.getElementById('msg').textContent));

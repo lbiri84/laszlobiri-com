@@ -35,6 +35,7 @@ const TABLES = {
   lists: 'name', items: 'name', item_history: 'name',
   pupils: 'nickname', results: 'topic', pupil_badges: 'badge_id', devices: 'label', question_reports: 'prompt', chapter_access: 'subject',
   device_pupils: null,   // nincs szöveges oszlopa: csak olvasás és beszúrás
+  th_flats: 'code', th_residents: 'flat', th_periods: 'name', th_readings: 'note', th_items: 'name', th_item_shares: 'flat', th_transfers: 'from_flat',
 };
 
 let failed = 0;
@@ -101,6 +102,13 @@ await expectError('rpc my_access', sb.rpc('my_access'));
 await expectError('rpc admin_access_list', sb.rpc('admin_access_list'));
 await expectError('rpc admin_access_set', sb.rpc('admin_access_set', { p_email: 'x@example.invalid', p_apps: ['ebed'] }));
 await expectError('rpc admin_access_remove', sb.rpc('admin_access_remove', { p_email: 'x@example.invalid' }));
+await expectError('rpc admin_set_flat', sb.rpc('admin_set_flat', { p_email: 'x@example.invalid', p_flat: 'em-4', p_manager: true }));
+await expectError('rpc th_me', sb.rpc('th_me'));
+await expectError('rpc th_open_period', sb.rpc('th_open_period', { p_name: 'x', p_starts_on: '2026-01-01' }));
+await expectError('rpc th_save_item', sb.rpc('th_save_item', { p: {} }));
+await expectError('rpc th_save_flats', sb.rpc('th_save_flats', { p: {} }));
+await expectError('rpc th_mark_transfer', sb.rpc('th_mark_transfer', { p_id: '00000000-0000-0000-0000-000000000000', p_paid: true }));
+await expectError('rpc th_import', sb.rpc('th_import', { p: {} }));
 await expectError('rpc bump_history', sb.rpc('bump_history', {
   p_household: '00000000-0000-0000-0000-000000000000', p_name_key: 'x', p_name: 'x', p_cat: 'egyeb',
 }));
