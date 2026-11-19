@@ -73,7 +73,8 @@ function rpc(fn, p, who) {
       if (!open(it.period_id)) return err(400, '22023', 'Az időszak le van zárva.');
       const tot = Object.values(it.shares).reduce((a, v) => a + Number(v), 0);
       if (tot !== it.amount) return err(400, '22023', `A lakásrészek összege (${tot}) nem egyezik a tétel összegével (${it.amount}).`);
-      if (Object.entries(it.shares).some(([f, v]) => v && !it.participants.includes(f))) return err(400, '22023', 'Csak beszálló lakásnak lehet része.');
+      // Mint az adatbázis: nem beszálló lakás nem szerepelhet a részek között, 0 Ft-tal sem.
+      if (Object.keys(it.shares).some(f => !it.participants.includes(f))) return err(400, '22023', 'Csak beszálló lakásnak lehet része.');
       const { shares, ...row } = it;
       T.th_items = T.th_items.filter(x => x.id !== it.id); T.th_items.push({ ...row, created_at: new Date().toISOString() });
       T.th_item_shares = T.th_item_shares.filter(s => s.item_id !== it.id);
@@ -275,6 +276,20 @@ try {
   p.once('dialog', d => d.accept());
   await p.click('[data-act=delitem]'); await msgIs(p, /Törölve/);
   check(!T.th_items.some(i => i.name === 'Lépcsőház festék'), 'tétel törlése');
+
+  // em-4 fizetett fsz-2 helyett: kézi felosztás, csak fsz-2 száll be
+  await p.goto(SITE + '/#/tetel/uj'); await p.waitForSelector('#itemForm');
+  await p.fill('#itemForm [name=name]', 'Tartozás rendezése');
+  await typeIn(p, '#itemForm [name=amount]', '60307');
+  await p.click('#itemForm label:has([name=paid_by][value="em-4"])');
+  for (const f of ['fsz-1', 'em-3', 'em-4']) await p.click(`#itemForm label:has([name=participants][value="${f}"])`);
+  await p.click('#itemForm label:has([name=method][value=kezi])');
+  await typeIn(p, '#itemForm [name="m_fsz-2"]', '60307');
+  await p.click('#itemForm button[type=submit]'); await msgIs(p, /Mentve/);
+  check(JSON.stringify(sharesOf('Tartozás rendezése')) === '[0,60307,0,0]', 'kézi, egy lakás: em-4 fizetett fsz-2 helyett, mentve');
+  await p.goto(SITE + '/#/tetel/' + T.th_items.find(i => i.name === 'Tartozás rendezése').id); await p.waitForSelector('#itemForm');
+  p.once('dialog', d => d.accept());
+  await p.click('[data-act=delitem]'); await msgIs(p, /Törölve/);
 
   await shot(p, 'tarsashaz-idoszak');
   // Lezárás
