@@ -120,11 +120,9 @@ function rpc(fn, p, who) {
       T.th_item_shares = T.th_item_shares.filter(x => !ids.has(x.item_id)); T.th_transfers = T.th_transfers.filter(t => t.period_id !== p.p_id);
       return { status: 200, body: null };
     }
-    case 'th_reset': {
+    case 'th_delete_residents': {
       if (needMgr()) return needMgr();
-      if (p.p_confirm !== 'TÖRLÉS') return err(400, '22023', 'A törléshez írd be: TÖRLÉS');
-      for (const k of ['th_periods', 'th_items', 'th_item_shares', 'th_transfers', 'th_readings']) T[k] = [];
-      if (p.p_settings) { T.th_flats = []; T.th_residents = []; }
+      T.th_residents = T.th_residents.filter(r => r.valid_from !== p.p_valid_from);
       return { status: 200, body: null };
     }
     case 'th_mark_transfer': {
@@ -296,6 +294,7 @@ try {
   await q.waitForSelector('#tabs:not([hidden])');
   check(/27\s*192\s*Ft/.test(await q.textContent('.hero')) && /fsz-1/.test(await q.textContent('.hero')), 'lakó: az áttekintésen a saját utalása (27 192 Ft fsz-1-nek)');
   check(!(await q.$('a[href="#/tetel/uj"]')) && !(await q.$('a[href="#/viz/uj"]')), 'lakó: nincs szerkesztő gomb');
+  check(await q.$eval('#tabs [data-tab=settings]', e => e.hidden), 'lakó: nincs Beállítások fül');
   await shot(q, 'tarsashaz-lako');
   await q.click('.hero');
   await q.waitForSelector('[data-paid]');
@@ -320,14 +319,16 @@ try {
   check(T.th_periods[0].status === 'open' && T.th_transfers.length === 0, 'újranyitás: megerősítés után nyitott, az utalások törlődtek');
   await p.click('[data-act=delperiod]'); await msgIs(p, /Időszak törölve/);
   check(T.th_periods.length === 0 && T.th_items.length === 0 && T.th_item_shares.length === 0, 'időszak törlése: a tételekkel és a részekkel együtt');
-  await p.goto(SITE + '/#/beallitasok'); await p.waitForSelector('#resetForm');
-  await p.fill('#resetForm [name=confirm]', 'torles'); await p.click('#resetForm button');
-  await msgIs(p, /írd be: TÖRLÉS/);
-  check(T.th_readings.length === 2, 'kiürítés: hibás megerősítésnél nem töröl');
-  await p.fill('#resetForm [name=confirm]', 'TÖRLÉS'); await p.click('#resetForm button');
-  await msgIs(p, /kiürítve/);
-  check(T.th_readings.length === 0 && T.th_flats.length === 4, 'kiürítés: a leolvasások törlődtek, a hányad megmaradt');
-  await shot(p, 'tarsashaz-kiuritve');
+  // Létszám: egy véletlen mai bejegyzés, majd törlése az előzmények közül
+  await p.goto(SITE + '/#/beallitasok'); await p.waitForSelector('#resForm');
+  await p.fill('#resForm [name=valid_from]', '2026-11-18'); await p.click('#resForm button');
+  await msgIs(p, /Lakók száma mentve/);
+  check((await p.$$('.hist .row')).length === 2, 'beállítások: a létszám előzményei a létszám alatt (2 bejegyzés)');
+  await p.click('[data-delres="2026-11-18"]'); await msgIs(p, /Létszám-bejegyzés törölve/);
+  check(!T.th_residents.some(r => r.valid_from === '2026-11-18') && T.th_residents.length === 4, 'létszám: a véletlen bejegyzés törölve, a régi megmaradt');
+  check(!(await p.$('#resetForm')) && !(await p.$('#importForm')), 'beállítások: nincs kiürítés és betöltés');
+  check(await p.$eval('#tabs [data-tab=settings]', e => !e.hidden && e.classList.contains('on')), 'kezelő: külön Beállítások fül, kijelölve');
+  await shot(p, 'tarsashaz-beallitasok');
 
   check(p.errors.length === 0 && q.errors.length === 0, 'nincs JavaScript-hiba' + (p.errors.length + q.errors.length ? ': ' + [...p.errors, ...q.errors].join(' | ') : ''));
 } catch (e) {
