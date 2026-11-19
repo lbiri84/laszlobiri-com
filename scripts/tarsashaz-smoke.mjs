@@ -168,6 +168,8 @@ async function phone(id) {
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|fonts/.test(m.text())) page.errors.push(m.text()); });
   return { ctx, page };
 }
+// Gépelés számjegyenként, ahogy egy ember (a mező minden leütés után újrarajzolódik).
+const typeIn = async (page, sel, text) => { await page.fill(sel, ''); await page.click(sel); await page.keyboard.type(text, { delay: 15 }); };
 const msgIs = (page, re) => page.waitForFunction(r => new RegExp(r).test(document.getElementById('msg')?.textContent || ''), re.source, { timeout: 10000 });
 const sharesOf = name => { const it = T.th_items.find(i => i.name === name); return FLATS.map(f => T.th_item_shares.find(s => s.item_id === it?.id && s.flat === f)?.amount || 0); };
 
@@ -197,8 +199,9 @@ try {
   // Vízóra: két leolvasás
   for (const [d, main, a, b, c, e] of [['2026-08-03', 1246, 212, 604, 577, 630], ['2026-10-12', 1284, 215, 614, 586, 640]]) {
     await p.goto(SITE + '/#/viz/uj'); await p.waitForSelector('#readingForm');
-    await p.fill('[name=read_on]', d); await p.fill('[name=main]', String(main));
-    for (const [k, v] of [['fsz1', a], ['fsz2', b], ['em3', c], ['em4', e]]) await p.fill(`[name=${k}]`, String(v));
+    await p.fill('[name=read_on]', d); await typeIn(p, '[name=main]', String(main));
+    for (const [k, v] of [['fsz1', a], ['fsz2', b], ['em3', c], ['em4', e]]) await typeIn(p, `[name=${k}]`, String(v).replace('.', ','));
+    check(await p.inputValue('[name=main]') === String(main), `leolvasás: a főmérő gépelve is egyben marad (${main})`);
     await p.click('#readingForm button[type=submit]');
     await msgIs(p, /Leolvasás mentve/);
   }
@@ -216,7 +219,8 @@ try {
     await p.goto(SITE + '/#/tetel/uj'); await p.waitForSelector('#itemForm');
     await p.fill('#itemForm [name=name]', name);
     await p.click(`#itemForm label:has([name=category][value=${cat}])`);
-    await p.fill('#itemForm [name=amount]', String(amount));
+    await typeIn(p, '#itemForm [name=amount]', String(amount));
+    check(await p.inputValue('#itemForm [name=amount]') === String(amount), `tétel: az összeg gépelve is egyben marad (${amount})`);
     await p.click(`#itemForm label:has([name=paid_by][value="${payer}"])`);
     await p.click(`#itemForm label:has([name=method][value=${method}])`);
     await p.click('#itemForm button[type=submit]');
@@ -233,7 +237,7 @@ try {
 
   // Részleges beszállás: csak em-3 és em-4, tulajdoni hányad szerint → fele-fele
   await p.goto(SITE + '/#/tetel/uj'); await p.waitForSelector('#itemForm');
-  await p.fill('#itemForm [name=name]', 'Lépcsőház festék'); await p.fill('#itemForm [name=amount]', '10001');
+  await p.fill('#itemForm [name=name]', 'Lépcsőház festék'); await typeIn(p, '#itemForm [name=amount]', '10001');
   await p.click('#itemForm label:has([name=participants][value="fsz-1"])'); await p.click('#itemForm label:has([name=participants][value="fsz-2"])');
   check(/5\s*001\s*Ft/.test(await p.textContent('.split')) && /5\s*000\s*Ft/.test(await p.textContent('.split')), 'részleges beszállás: az előnézet fele-fele, a kerekítés pontos');
   await shot(p, 'tarsashaz-uj-tetel');
