@@ -212,6 +212,8 @@ try {
   await p.waitForSelector('#tabs:not([hidden])');
   check(/Nincs nyitott időszak/.test(await p.textContent('#app')), 'kezdetben nincs nyitott időszak');
   check(await p.textContent('#me') === 'em-4 · kezelő', 'fejléc: em-4 · kezelő');
+  await p.click('header .help-btn'); await p.waitForSelector('.help');
+  check(await p.textContent('h1') === 'Hogyan számol?' && await p.isVisible('#h-utalasok'), 'súgó: a fejléc „?” gombja megnyitja a leírást');
 
   // Beállítások
   await p.goto(SITE + '/#/beallitasok');
@@ -279,6 +281,13 @@ try {
   await p.fill('#itemForm [name=name]', 'Lépcsőház festék'); await typeIn(p, '#itemForm [name=amount]', '10001');
   await p.keyboard.press('Home'); await p.keyboard.press('ArrowRight'); await p.keyboard.type('2'); await p.keyboard.press('Backspace');
   check(await p.inputValue('#itemForm [name=amount]') === '10 001', 'tétel: a szám közepén szerkesztve is jó a tagolás és a kurzor');
+  // Súgó: a Felosztás melletti „?” a leírás megfelelő részére visz, a Vissza után a félkész tétel megmarad
+  await p.click('a.q[href="#/sugo/felosztas"]'); await p.waitForSelector('.help');
+  check(await p.isVisible('#h-felosztas') && /Vízfogyasztás/.test(await p.textContent('.help')) && /1\s911 \/ 1\s911 \/ 3\s089 \/ 3\s089/.test(await p.textContent('.help')),
+    'súgó: a felosztás leírása, a jelenlegi tulajdoni hányaddal');
+  await shot(p, 'tarsashaz-sugo');
+  await p.click('[data-act=back]'); await p.waitForSelector('#itemForm');
+  check(await p.inputValue('#itemForm [name=name]') === 'Lépcsőház festék' && await p.inputValue('#itemForm [name=amount]') === '10 001', 'súgó: vissza után a félkész tétel megmaradt');
   await p.click('#itemForm label:has([name=participants][value="fsz-1"])'); await p.click('#itemForm label:has([name=participants][value="fsz-2"])');
   check(/5\s*001\s*Ft/.test(await p.textContent('.split')) && /5\s*000\s*Ft/.test(await p.textContent('.split')), 'részleges beszállás: az előnézet fele-fele, a kerekítés pontos');
   await shot(p, 'tarsashaz-uj-tetel');
