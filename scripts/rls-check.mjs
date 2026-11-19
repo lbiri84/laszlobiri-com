@@ -109,6 +109,7 @@ await expectError('rpc th_save_item', sb.rpc('th_save_item', { p: {} }));
 await expectError('rpc th_save_flats', sb.rpc('th_save_flats', { p: {} }));
 await expectError('rpc th_mark_transfer', sb.rpc('th_mark_transfer', { p_id: '00000000-0000-0000-0000-000000000000', p_paid: true }));
 await expectError('rpc th_delete_period', sb.rpc('th_delete_period', { p_id: '00000000-0000-0000-0000-000000000000', p_force: true }));
+await expectError('rpc th_rename_period', sb.rpc('th_rename_period', { p_id: '00000000-0000-0000-0000-000000000000', p_name: 'x', p_starts_on: '2026-01-01', p_ends_on: null, p_note: null }));
 await expectError('rpc th_delete_residents', sb.rpc('th_delete_residents', { p_valid_from: '2026-01-01' }));
 await expectError('rpc bump_history', sb.rpc('bump_history', {
   p_household: '00000000-0000-0000-0000-000000000000', p_name_key: 'x', p_name: 'x', p_cat: 'egyeb',
