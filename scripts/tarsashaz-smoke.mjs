@@ -67,6 +67,11 @@ function rpc(fn, p, who) {
       const id = uuid(); T.th_periods.push({ id, name: p.p_name, starts_on: p.p_starts_on, ends_on: null, status: 'open', closed_at: null, note: null, created_at: new Date().toISOString() });
       return { status: 200, body: id };
     }
+    case 'th_rename_period': {
+      if (needMgr()) return needMgr();
+      Object.assign(T.th_periods.find(x => x.id === p.p_id), { name: p.p_name.trim(), starts_on: p.p_starts_on, ends_on: p.p_ends_on, note: (p.p_note || '').trim() || null });
+      return { status: 200, body: null };
+    }
     case 'th_save_item': {
       if (needMgr()) return needMgr();
       const it = p.p;
@@ -237,9 +242,16 @@ try {
 
   // Új időszak
   await p.goto(SITE + '/#/idoszakok'); await p.waitForSelector('#newPeriod');
-  await p.fill('#newPeriod [name=name]', '2026. szeptember–október'); await p.fill('#newPeriod [name=starts_on]', '2026-09-01');
+  await p.fill('#newPeriod [name=name]', '2026. szetpember–oktber'); await p.fill('#newPeriod [name=starts_on]', '2026-09-01');
   await p.click('#newPeriod button');
   await msgIs(p, /Az időszak elindult/);
+  // Elírt név javítása
+  await p.click('[data-act=editperiod]'); await p.waitForSelector('#periodForm');
+  await p.fill('#periodForm [name=name]', '2026. szeptember–október');
+  await p.fill('#periodForm [name=note]', 'két hónap');
+  await p.click('#periodForm button[type=submit]'); await msgIs(p, /Mentve: 2026\. szeptember–október/);
+  check(T.th_periods[0].name === '2026. szeptember–október' && T.th_periods[0].note === 'két hónap' && await p.textContent('h1') === '2026. szeptember–október',
+    'időszak szerkesztése: a név és a megjegyzés javítható');
 
   // Tételek
   async function addItem(name, cat, amount, payer, method) {

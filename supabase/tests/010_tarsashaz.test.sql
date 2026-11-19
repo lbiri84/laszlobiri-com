@@ -13,7 +13,7 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 \ir 000_helpers.sql
 
-select plan(47);
+select plan(49);
 
 insert into public.households (id, name) values ('aaaaaaaa-0000-0000-0000-000000000000', 'A háztartás');
 insert into private.allowed_emails (email, household_id, app_role, apps, flat) values
@@ -59,6 +59,10 @@ select is(pg_temp.err_as(:K, $$select public.th_open_period('Még egy', '2026-11
 
 create temp table ids as select id as pid from public.th_periods;
 grant select on ids to authenticated;
+
+select is(pg_temp.err_as(:L1, $$select public.th_rename_period((select pid from ids), 'Átnevezve', '2026-09-01', null, null)$$), '42501', 'átnevezés: lakó nem nevezheti át');
+select is(pg_temp.err_as(:K, $$select public.th_rename_period((select pid from ids), ' 2026. szeptember–október ', '2026-09-01', null, 'két hónap')$$)
+  || ':' || (select name from public.th_periods limit 1), 'ok:2026. szeptember–október', 'átnevezés: kezelő javítja az elírt nevet');
 
 select is(pg_temp.err_as(:K, $$select public.th_save_item(jsonb_build_object('period_id', (select pid from ids), 'name', 'Közös villany', 'category', 'villany',
   'amount', 8940, 'paid_by', 'fsz-1', 'method', 'hanyad', 'participants', '["fsz-1","fsz-2","em-3","em-4"]'::jsonb,
