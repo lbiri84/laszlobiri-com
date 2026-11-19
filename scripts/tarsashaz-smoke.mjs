@@ -184,7 +184,9 @@ const shot = async (page, name) => { if (process.env.SHOTS) await page.screensho
 
 const browser = await chromium.launch();
 async function phone(id) {
-  const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 800 }, deviceScaleFactor: process.env.SHOTS ? 2 : 1 });
+  // MOBILE=1: telefon emulálása (érintés, mobil böngésző).
+  const mobile = process.env.MOBILE ? { isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' } : {};
+  const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 800 }, deviceScaleFactor: process.env.SHOTS ? 2 : 1, ...mobile });
   await ctx.route('https://fonts.googleapis.com/**', r => r.abort());
   await ctx.route('https://laszlobiri.com/**', async r => {
     const u = new URL(r.request().url());
