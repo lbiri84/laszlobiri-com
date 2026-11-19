@@ -325,10 +325,10 @@ try {
     'áttekintés: a nyitott időszak kiemelt panelen, „most még nem kell utalni” felirattal');
   await shot(p, 'tarsashaz-attekintes');
   await p.goto(periodUrl); await p.waitForSelector('[data-act=preclose]');
-  // A tételek listája felosztási mód szerint, csoportonként kis fejléccel; a felosztás táblázata egyszerű
-  const heads = await p.$$eval('.grp-h', hs => hs.map(h => h.textContent.trim()));
-  check(JSON.stringify(heads) === JSON.stringify(['Vízfogyasztás szerint', 'Lakók száma szerint', 'Tulajdoni hányad szerint', 'Egyenlő részben']) && !(await p.$('table tr.grp')),
-    'tételek: felosztási mód szerint, csoportonként kis fejléccel');
+  // A felosztás táblázatában felosztási módonként vékony fejléc
+  const heads = await p.$$eval('.split-t tr.grp', hs => hs.map(h => h.textContent.trim()));
+  check(JSON.stringify(heads) === JSON.stringify(['Vízfogyasztás szerint', 'Lakók száma szerint', 'Tulajdoni hányad szerint', 'Egyenlő részben']) && !(await p.$('.grp-h, .split-t tr.sub')),
+    'felosztás: a táblázatban módonként vékony fejléc, összegzés nélkül; a tételek listája az eredeti');
   await shot(p, 'tarsashaz-idoszak');
   // Lezárás
   await p.click('[data-act=preclose]');
