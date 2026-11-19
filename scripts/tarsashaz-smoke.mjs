@@ -102,6 +102,31 @@ function rpc(fn, p, who) {
       Object.assign(T.th_periods.find(x => x.id === p.p_id), { status: 'closed', closed_at: new Date().toISOString() });
       return { status: 200, body: null };
     }
+    case 'th_reopen_period': {
+      if (needMgr()) return needMgr();
+      if (T.th_periods.some(x => x.status === 'open')) return err(400, '22023', 'Előbb zárd le a nyitott időszakot.');
+      const paid = T.th_transfers.filter(t => t.period_id === p.p_id && t.paid_at).length;
+      if (paid && !p.p_force) return err(400, '22023', `Ebben az időszakban már ${paid} utalás megérkezett.`);
+      T.th_transfers = T.th_transfers.filter(t => t.period_id !== p.p_id);
+      Object.assign(T.th_periods.find(x => x.id === p.p_id), { status: 'open', closed_at: null });
+      return { status: 200, body: paid };
+    }
+    case 'th_delete_period': {
+      if (needMgr()) return needMgr();
+      const paid = T.th_transfers.filter(t => t.period_id === p.p_id && t.paid_at).length;
+      if (paid && !p.p_force) return err(400, '22023', `Ebben az időszakban már ${paid} utalás megérkezett.`);
+      const ids = new Set(T.th_items.filter(i => i.period_id === p.p_id).map(i => i.id));
+      T.th_periods = T.th_periods.filter(x => x.id !== p.p_id); T.th_items = T.th_items.filter(i => !ids.has(i.id));
+      T.th_item_shares = T.th_item_shares.filter(x => !ids.has(x.item_id)); T.th_transfers = T.th_transfers.filter(t => t.period_id !== p.p_id);
+      return { status: 200, body: null };
+    }
+    case 'th_reset': {
+      if (needMgr()) return needMgr();
+      if (p.p_confirm !== 'TÖRLÉS') return err(400, '22023', 'A törléshez írd be: TÖRLÉS');
+      for (const k of ['th_periods', 'th_items', 'th_item_shares', 'th_transfers', 'th_readings']) T[k] = [];
+      if (p.p_settings) { T.th_flats = []; T.th_residents = []; }
+      return { status: 200, body: null };
+    }
     case 'th_mark_transfer': {
       const t = T.th_transfers.find(x => x.id === p.p_id);
       if (!(mgr || [t.from_flat, t.to_flat].includes(who?.flat))) return err(403, '42501', 'Ezt az utalást nem jelölheted.');
@@ -286,6 +311,23 @@ try {
   await p.goto(SITE + '/#/kimutatas'); await p.waitForSelector('.hbar');
   check(/91\s*520\s*Ft/.test(await p.textContent('#app')), 'kimutatás: az éves összeg 91 520 Ft');
   await shot(p, 'tarsashaz-kimutatas');
+
+  // Újranyitás, időszak törlése, minden adat törlése (kezelő)
+  const pid = T.th_periods[0].id;
+  await p.goto(SITE + '/#/idoszak/' + pid); await p.waitForSelector('[data-act=reopen]');
+  p.on('dialog', d => d.accept());
+  await p.click('[data-act=reopen]'); await msgIs(p, /Újranyitva/);
+  check(T.th_periods[0].status === 'open' && T.th_transfers.length === 0, 'újranyitás: megerősítés után nyitott, az utalások törlődtek');
+  await p.click('[data-act=delperiod]'); await msgIs(p, /Időszak törölve/);
+  check(T.th_periods.length === 0 && T.th_items.length === 0 && T.th_item_shares.length === 0, 'időszak törlése: a tételekkel és a részekkel együtt');
+  await p.goto(SITE + '/#/beallitasok'); await p.waitForSelector('#resetForm');
+  await p.fill('#resetForm [name=confirm]', 'torles'); await p.click('#resetForm button');
+  await msgIs(p, /írd be: TÖRLÉS/);
+  check(T.th_readings.length === 2, 'kiürítés: hibás megerősítésnél nem töröl');
+  await p.fill('#resetForm [name=confirm]', 'TÖRLÉS'); await p.click('#resetForm button');
+  await msgIs(p, /kiürítve/);
+  check(T.th_readings.length === 0 && T.th_flats.length === 4, 'kiürítés: a leolvasások törlődtek, a hányad megmaradt');
+  await shot(p, 'tarsashaz-kiuritve');
 
   check(p.errors.length === 0 && q.errors.length === 0, 'nincs JavaScript-hiba' + (p.errors.length + q.errors.length ? ': ' + [...p.errors, ...q.errors].join(' | ') : ''));
 } catch (e) {
