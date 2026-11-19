@@ -28,8 +28,8 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 const FLATS = ['fsz-1', 'fsz-2', 'em-3', 'em-4'];
 
 // ---------------------------------------------------------------- ál-adatbázis
-const K = 'k0k0k0k0-0000-0000-0000-000000000000', L = 'l2l2l2l2-0000-0000-0000-000000000000';
-const WHO = { [K]: { flat: 'em-4', manager: true }, [L]: { flat: 'fsz-2', manager: false } };
+const K = 'k0k0k0k0-0000-0000-0000-000000000000', L = 'l2l2l2l2-0000-0000-0000-000000000000', R = 'r1r1r1r1-0000-0000-0000-000000000000';
+const WHO = { [K]: { flat: 'em-4', manager: true }, [L]: { flat: 'fsz-2', manager: false }, [R]: { flat: 'fsz-1', manager: false } };
 const T = { th_flats: [], th_residents: [], th_periods: [], th_readings: [], th_items: [], th_item_shares: [], th_transfers: [] };
 const uuid = () => crypto.randomUUID();
 const err = (status, code, message) => ({ status, body: { code, message } });
@@ -356,15 +356,41 @@ try {
   check(!(await q.$('[data-delreading], a[href="#/viz/uj"]')), 'lakó: a vízóra oldalon nincs szerkesztő gomb');
   await q.goto(SITE + '/');
   await shot(q, 'tarsashaz-lako');
-  await q.click('.hero');
-  await q.waitForSelector('[data-paid]');
+  // Időszak oldala: lezárás után az utalások felül; a lakó csak a saját utalását jelölheti
+  await q.goto(SITE + '/#/idoszak/' + T.th_periods[0].id); await q.waitForSelector('[data-paid]');
+  check(await q.evaluate(() => { const h = [...document.querySelectorAll('#app h2')].map(x => x.textContent.trim()); return h.includes('Utalások') && h.indexOf('Utalások') < h.indexOf('Tételek'); }),
+    'időszak: lezárás után az utalások a tételek előtt');
+  await shot(q, 'tarsashaz-lako-utalasok');
   const boxes = await q.$$eval('[data-paid]', els => els.map(e => [e.closest('.tr').textContent.replace(/\s+/g, ' ').trim(), e.disabled]));
   check(boxes.filter(b => !b[1]).length === 1 && /fsz-2/.test(boxes.find(b => !b[1])[0]), 'lakó: csak a saját utalását jelölheti');
-  await q.check('[data-paid]:not([disabled])');
-  await msgIs(q, /Megérkezettnek jelölve/);
-  check(T.th_transfers.find(t => t.from_flat === 'fsz-2').paid_at, 'lakó: az utalás megérkezettnek jelölve');
-  await q.goto(SITE + '/#/idoszakok'); await q.waitForSelector('.card');
-  check(/lezárva, 2 utalás vár/.test(await q.textContent('#app')), 'időszakok: „lezárva, 2 utalás vár”');
+
+  // A fogadó (fsz-1) áttekintése: „Még tartoznak neked”, gombbal
+  const C = await phone(R);
+  await C.page.goto(SITE + '/'); await C.page.waitForSelector('#tabs:not([hidden])');
+  check((await C.page.$$('.todo.owed [data-paidbtn]')).length === 3 && /ma zárult/.test(await C.page.textContent('.todo.owed')), 'fogadó (fsz-1): Teendők, három „Megjött” gomb, „ma zárult”');
+  await shot(C.page, 'tarsashaz-fogado');
+
+  // Az utaló (fsz-2) az áttekintésen jelöli: „Elutaltam”
+  await q.goto(SITE + '/'); await q.waitForSelector('[data-paidbtn]');
+  check(/Még nem utaltad el/.test(await q.textContent('.todo.hero')) && /Elutaltam/.test(await q.textContent('.todo.hero button')), 'lakó: Teendők, „Még nem utaltad el” és „Elutaltam” gomb');
+  await q.click('.todo.hero [data-paidbtn]'); await msgIs(q, /Megjelölve: fsz-2 → fsz-1/);
+  check(T.th_transfers.find(t => t.from_flat === 'fsz-2').paid_at && !(await q.$('.todo')), 'lakó: egy koppintással megjelölve, a teendő eltűnt');
+
+  // A fogadó a „Megjött” gombbal jelöli em-3 utalását
+  await C.page.reload(); await C.page.waitForSelector('.todo.owed');
+  check((await C.page.$$('.todo.owed')).length === 2, 'fogadó: az fsz-2 utalása már nem vár');
+  await C.page.click('.todo.owed:has-text("em-3") [data-paidbtn]'); await msgIs(C.page, /Megjelölve: em-3 → fsz-1/);
+  check(T.th_transfers.find(t => t.from_flat === 'em-3').paid_at, 'fogadó: „Megjött” megjelölve');
+
+  // Egy hét után kiemelt
+  T.th_periods[0].closed_at = new Date(Date.now() - 8 * 86400000).toISOString();
+  await C.page.reload(); await C.page.waitForSelector('.todo.owed');
+  check(!!(await C.page.$('.todo.owed.late')) && /lezárva 8 napja/.test(await C.page.textContent('.todo.owed')), 'fogadó: egy hét után kiemelt („lezárva 8 napja”)');
+  await shot(C.page, 'tarsashaz-fogado-kesik');
+  T.th_periods[0].closed_at = new Date().toISOString();
+
+  await q.goto(SITE + '/#/idoszakok'); await q.reload(); await q.waitForSelector('.card');
+  check(/lezárva, 1 utalás vár/.test(await q.textContent('#app')), 'időszakok: „lezárva, 1 utalás vár”');
 
   // Kimutatás
   await p.goto(SITE + '/#/kimutatas'); await p.waitForSelector('.hbar');
