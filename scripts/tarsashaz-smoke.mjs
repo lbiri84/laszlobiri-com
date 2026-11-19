@@ -321,6 +321,8 @@ try {
   const plan = await p.$$eval('.tr', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
   check(plan.length === 3 && plan.every(t => /→\s*fsz-1/.test(t)) && plan.some(t => /fsz-2\s*→\s*fsz-1\s*27\s192/.test(t)), 'áttekintés: javasolt utalások (3, mind fsz-1 felé)');
   check(!/Vízóra/.test(await p.$$eval('#app h2', hs => hs.map(h => h.textContent).join(' '))), 'áttekintés: nincs vízóra rész');
+  check(/most még nem kell utalni/.test(await p.textContent('.pending .pending-note')) && (await p.$$('.pending .tr')).length === 3 && /25\s486/.test(await p.textContent('.pending .card')),
+    'áttekintés: a nyitott időszak kiemelt panelen, „most még nem kell utalni” felirattal');
   await shot(p, 'tarsashaz-attekintes');
   await p.goto(periodUrl); await p.waitForSelector('[data-act=preclose]');
   await shot(p, 'tarsashaz-idoszak');
@@ -341,6 +343,7 @@ try {
   await q.waitForSelector('#tabs:not([hidden])');
   check(/27\s*192\s*Ft/.test(await q.textContent('.hero')) && /fsz-1/.test(await q.textContent('.hero')), 'lakó: az áttekintésen a saját utalása (27 192 Ft fsz-1-nek)');
   check(!(await q.$('a[href="#/tetel/uj"]')) && !(await q.$('a[href="#/viz/uj"]')), 'lakó: nincs szerkesztő gomb');
+  check(!(await q.$('.pending')) && (await q.$$('.hero')).length === 1, 'lakó: lezárás után a valódi teendő (utalás) látszik, a nyitott-panel nincs');
   check(await q.$eval('#tabs [data-tab=settings]', e => e.hidden), 'lakó: nincs Beállítások fül');
   // Közvetlen címmel sem nyílik meg egyik szerkesztő oldal sem
   for (const [hash, sel] of [['#/beallitasok', '#flatsForm, #resForm'], ['#/tetel/uj', '#itemForm'], ['#/viz/uj', '#readingForm']]) {
