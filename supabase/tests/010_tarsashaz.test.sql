@@ -13,7 +13,7 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 \ir 000_helpers.sql
 
-select plan(40);
+select plan(47);
 
 insert into public.households (id, name) values ('aaaaaaaa-0000-0000-0000-000000000000', 'A háztartás');
 insert into private.allowed_emails (email, household_id, app_role, apps, flat) values
@@ -81,6 +81,14 @@ select is(pg_temp.count_as(:L2, 'select * from public.th_item_shares'), 8, 'tét
 -- egyenlegek: fsz-1 +8940-1708-690 = 6542; fsz-2 −2398; em-3 −3452; em-4 2760-2762-690 = −692
 select is(pg_temp.err_as(:K, $$select public.th_close_period((select pid from ids),
   '[{"from":"fsz-2","to":"fsz-1","amount":2398},{"from":"em-3","to":"fsz-1","amount":3452}]')$$), '22023', 'lezárás: hiányzó utalás → elutasítva');
+-- egyedi utalások: 2 Ft eltérés (fsz-1 +2, em-4 +2) tűrés nélkül elutasítva
+select is(pg_temp.err_as(:K, $$select public.th_close_period((select pid from ids),
+  '[{"from":"fsz-2","to":"fsz-1","amount":2398},{"from":"em-3","to":"fsz-1","amount":3452},{"from":"em-4","to":"fsz-1","amount":694}]')$$), '22023', 'egyedi utalás: eltérés tűrés nélkül → elutasítva');
+-- 11 Ft eltérés 20 Ft-os kérésre is elutasítva (a tűrés legfeljebb 10 Ft)
+select is(pg_temp.err_as(:K, $$select public.th_close_period((select pid from ids),
+  '[{"from":"fsz-2","to":"fsz-1","amount":2398},{"from":"em-3","to":"fsz-1","amount":3452},{"from":"em-4","to":"fsz-1","amount":703}]', 20)$$), '22023', 'egyedi utalás: 10 Ft fölötti eltérés → elutasítva');
+select is(pg_temp.err_as(:K, $$select public.th_close_period((select pid from ids),
+  '[{"from":"fsz-1","to":"fsz-1","amount":5}]', 10)$$), '22023', 'egyedi utalás: önmagának nem utalhat');
 select is(pg_temp.err_as(:K, $$select public.th_close_period((select pid from ids),
   '[{"from":"fsz-2","to":"fsz-1","amount":2398},{"from":"em-3","to":"fsz-1","amount":3452},{"from":"em-4","to":"fsz-1","amount":692}]')$$), 'ok', 'lezárás: az utalások kiadják az egyenlegeket');
 select is((select status from public.th_periods), 'closed', 'lezárás: az időszak lezárva');
@@ -108,6 +116,15 @@ select is(pg_temp.err_as(:L1, $$select public.th_delete_residents('2026-11-18')$
 select is(pg_temp.err_as(:K, $$select public.th_delete_residents('2026-11-18')$$), 'ok', 'létszám törlése: kezelő törli');
 select is((select string_agg(distinct valid_from::text, ',') from public.th_residents), '2025-07-01', 'létszám törlése: csak az a nap törlődött');
 select is((select count(*)::int from pg_proc where proname in ('th_import', 'th_reset')), 0, 'a betöltés és a kiürítés nincs többé');
+
+-- lezárás egyedi utalásokkal, kerekítési tűréssel, azonnal kiegyenlítve
+select is(pg_temp.err_as(:K, $$select public.th_open_period('Régi időszak', '2026-03-01')$$), 'ok', 'egyedi lezárás: új időszak');
+delete from ids; insert into ids select id from public.th_periods where status = 'open';
+select is(pg_temp.err_as(:K, $$select public.th_save_item(jsonb_build_object('period_id', (select pid from ids), 'name', 'Biztosítás', 'category', 'egyeb',
+  'amount', 1001, 'paid_by', 'fsz-1', 'method', 'egyenlo', 'participants', '["fsz-2","em-3"]'::jsonb, 'shares', '{"fsz-2":501,"em-3":500}'::jsonb))$$), 'ok', 'egyedi lezárás: egy tétel');
+select is(pg_temp.err_as(:K, $$select public.th_close_period((select pid from ids),
+  '[{"from":"fsz-2","to":"fsz-1","amount":500},{"from":"em-3","to":"fsz-1","amount":502}]', 10, true)$$), 'ok', 'egyedi lezárás: 1–2 Ft kerekítési eltéréssel elfogadva');
+select is((select count(*)::int from public.th_transfers where paid_at is not null), 2, 'egyedi lezárás: az utalások azonnal kiegyenlítve');
 
 select * from finish();
 rollback;
