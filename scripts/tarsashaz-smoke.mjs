@@ -342,6 +342,16 @@ try {
   check(/27\s*192\s*Ft/.test(await q.textContent('.hero')) && /fsz-1/.test(await q.textContent('.hero')), 'lakó: az áttekintésen a saját utalása (27 192 Ft fsz-1-nek)');
   check(!(await q.$('a[href="#/tetel/uj"]')) && !(await q.$('a[href="#/viz/uj"]')), 'lakó: nincs szerkesztő gomb');
   check(await q.$eval('#tabs [data-tab=settings]', e => e.hidden), 'lakó: nincs Beállítások fül');
+  // Közvetlen címmel sem nyílik meg egyik szerkesztő oldal sem
+  for (const [hash, sel] of [['#/beallitasok', '#flatsForm, #resForm'], ['#/tetel/uj', '#itemForm'], ['#/viz/uj', '#readingForm']]) {
+    await q.goto(SITE + '/' + hash); await q.waitForSelector('#app h2, #app h1');
+    check(!(await q.$(sel)), `lakó: a(z) ${hash} címen nincs szerkesztő űrlap`);
+  }
+  await q.goto(SITE + '/#/idoszak/' + T.th_periods[0].id); await q.waitForSelector('#app h1');
+  check(!(await q.$('[data-act=editperiod], [data-act=reopen], [data-act=delperiod], [data-act=preclose], a[href="#/tetel/uj"]')), 'lakó: az időszak oldalán nincs szerkesztő gomb');
+  await q.goto(SITE + '/#/viz'); await q.waitForSelector('#app h1');
+  check(!(await q.$('[data-delreading], a[href="#/viz/uj"]')), 'lakó: a vízóra oldalon nincs szerkesztő gomb');
+  await q.goto(SITE + '/');
   await shot(q, 'tarsashaz-lako');
   await q.click('.hero');
   await q.waitForSelector('[data-paid]');

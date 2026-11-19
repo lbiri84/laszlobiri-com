@@ -102,7 +102,7 @@ await expectError('rpc my_access', sb.rpc('my_access'));
 await expectError('rpc admin_access_list', sb.rpc('admin_access_list'));
 await expectError('rpc admin_access_set', sb.rpc('admin_access_set', { p_email: 'x@example.invalid', p_apps: ['ebed'] }));
 await expectError('rpc admin_access_remove', sb.rpc('admin_access_remove', { p_email: 'x@example.invalid' }));
-await expectError('rpc admin_set_flat', sb.rpc('admin_set_flat', { p_email: 'x@example.invalid', p_flat: 'em-4', p_manager: true }));
+await expectError('rpc admin_set_flat', sb.rpc('admin_set_flat', { p_email: 'x@example.invalid', p_flat: 'em-4' }));
 await expectError('rpc th_me', sb.rpc('th_me'));
 await expectError('rpc th_open_period', sb.rpc('th_open_period', { p_name: 'x', p_starts_on: '2026-01-01' }));
 await expectError('rpc th_save_item', sb.rpc('th_save_item', { p: {} }));

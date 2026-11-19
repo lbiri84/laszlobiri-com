@@ -27,7 +27,7 @@ function errText(e) {
 }
 
 const appBoxes = (name, on, dis = false) => SITES.map(s =>
-  `<label class="chk${dis ? ' dis' : ''}"><input type="checkbox" name="${name}" value="${s.app}"${on.includes(s.app) ? ' checked' : ''}${dis ? ' disabled' : ''}> ${esc(s.name)}${s.soon ? ' <span class="soon">(készül)</span>' : ''}</label>`).join('');
+  `<label class="chk${dis ? ' dis' : ''}"><input type="checkbox" name="${name}" value="${s.app}"${on.includes(s.app) ? ' checked' : ''}${dis ? ' disabled' : ''}> ${esc(s.name)}</label>`).join('');
 
 const checked = (root, name) => [...root.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
 
@@ -47,8 +47,7 @@ function row(r, i) {
   return `<tr data-i="${i}">
   <td class="addr"><div class="email">${esc(r.email)}</div>${r.app_role === 'admin' || self ? `<div>${r.app_role === 'admin' ? '<span class="pill">admin</span>' : ''}${self ? '<span class="pill">te</span>' : ''}</div>` : ''}<div class="who">${who}</div></td>
   ${SITES.map(s => box('app', s.app, (r.apps || []).includes(s.app), SHORT[s.app] || s.name)).join('')}
-  <td class="flat"><select name="flat" aria-label="${esc(r.email)}: lakás (társasház)"${(r.apps || []).includes('tarsashaz') ? '' : ' disabled'}>${['', ...FLATS].map(f => `<option value="${f}"${(r.flat || '') === f ? ' selected' : ''}>${f || '–'}</option>`).join('')}</select>
-    <label class="mgr"><input type="checkbox" name="mgr"${r.th_manager ? ' checked' : ''}${(r.apps || []).includes('tarsashaz') ? '' : ' disabled'}> kezelő</label></td>
+  <td class="flat"><select name="flat" aria-label="${esc(r.email)}: lakás (társasház)"${(r.apps || []).includes('tarsashaz') ? '' : ' disabled'}>${['', ...FLATS].map(f => `<option value="${f}"${(r.flat || '') === f ? ' selected' : ''}>${f || '–'}</option>`).join('')}</select></td>
   <td class="note"><input type="text" name="note" maxlength="80" value="${esc(r.note)}" aria-label="${esc(r.email)}: megjegyzés"></td>
   <td class="act"><button class="danger" type="button" data-remove${self ? ' disabled' : ''}>Visszavonás</button></td>
 </tr>`;
@@ -56,7 +55,7 @@ function row(r, i) {
 
 function render() {
   $('count').textContent = `(${rows.length})`;
-  $('head').innerHTML = '<th>Cím</th>' + SITES.map(s => `<th${s.soon ? ' title="készül"' : ''}>${esc(SHORT[s.app] || s.name)}${s.soon ? '*' : ''}</th>`).join('')
+  $('head').innerHTML = '<th>Cím</th>' + SITES.map(s => `<th>${esc(SHORT[s.app] || s.name)}</th>`).join('')
     + '<th>Lakás</th><th>Megjegyzés</th><th></th>';
   $('list').innerHTML = rows.map(row).join('');
 }
@@ -111,8 +110,8 @@ async function init() {
     tr.classList.add('busy');
     tr.querySelectorAll('input, select').forEach(i => { i.disabled = true; });
     try {
-      if (e.target.name === 'flat' || e.target.name === 'mgr') {
-        const { error } = await supabase.rpc('admin_set_flat', { p_email: r.email, p_flat: tr.querySelector('select[name=flat]').value || null, p_manager: tr.querySelector('input[name=mgr]').checked });
+      if (e.target.name === 'flat') {
+        const { error } = await supabase.rpc('admin_set_flat', { p_email: r.email, p_flat: e.target.value || null });
         if (error) throw error;
       } else await save(r.email, checked(tr, 'app'), note);
       await load();

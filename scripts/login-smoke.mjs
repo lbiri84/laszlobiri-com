@@ -38,8 +38,8 @@ const FAMILY = { apps: ['ebed', 'bevasarlas', 'gyakorlas'], admin: true };
 globalThis.access = FAMILY;
 const calls = [];
 const acl = [
-  { email: 'szulo@example.invalid', apps: ['ebed', 'bevasarlas', 'gyakorlas'], in_household: true, note: null, app_role: 'admin', display_name: 'Teszt Szülő', has_account: true, last_sign_in_at: '2026-11-17T08:00:00Z' },
-  { email: 'lako@example.invalid', apps: ['tarsashaz'], in_household: false, note: '3. lakás', app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null },
+  { email: 'szulo@example.invalid', apps: ['ebed', 'bevasarlas', 'gyakorlas'], note: null, app_role: 'admin', display_name: 'Teszt Szülő', has_account: true, last_sign_in_at: '2026-11-17T08:00:00Z' },
+  { email: 'lako@example.invalid', apps: ['tarsashaz'], note: '3. lakás', app_role: 'user', display_name: null, has_account: false, last_sign_in_at: null },
 ];
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, ORIGIN);
@@ -81,7 +81,7 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/rest/v1/rpc/admin_set_flat') {
     let body = ''; for await (const c of req) body += c;
     const j = JSON.parse(body || '{}'); calls.push(['admin_set_flat', j]);
-    const r = acl.find(x => x.email === j.p_email); if (r) Object.assign(r, { flat: j.p_flat, th_manager: j.p_manager });
+    const r = acl.find(x => x.email === j.p_email); if (r) Object.assign(r, { flat: j.p_flat });
     res.writeHead(200, { 'content-type': 'application/json' }); return res.end('null');
   }
   if (u.pathname.startsWith('/rest/v1/rpc/admin_access_')) {
@@ -225,7 +225,8 @@ try {
   await page.evaluate(() => { document.getElementById('msg').textContent = ''; });
   await page.selectOption('#list tr:nth-child(2) select[name=flat]', 'em-3');
   await page.waitForFunction(() => /Mentve/.test(document.getElementById('msg').textContent));
-  check(acl[1].flat === 'em-3' && acl[1].th_manager === false, 'admin: a lakótárs lakása beállítható (em-3)');
+  check(acl[1].flat === 'em-3' && !('p_manager' in calls.filter(c => c[0] === 'admin_set_flat').pop()[1]), 'admin: a lakótárs lakása beállítható (em-3), kezelő-pipa nélkül');
+  check(!(await page.$('#list input[name=mgr]')), 'admin: nincs külön kezelő pipa (csak az admin kezelő)');
   page.once('dialog', d => d.accept());
   await page.click('#list tr:nth-child(3) button[data-remove]');
   await page.waitForFunction(() => /Visszavonva/.test(document.getElementById('msg').textContent));

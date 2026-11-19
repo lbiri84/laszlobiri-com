@@ -51,7 +51,7 @@
   label.chk { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; cursor: pointer; }
   label.chk input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
   label.chk.dis { color: var(--fg-muted); cursor: default; }
-  .soon { font-size: 13px; color: var(--fg-muted); }
+  .count { font-size: 13px; color: var(--fg-muted); }
   .field { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
   .field span { font-size: 14px; line-height: 20px; color: var(--fg-muted); }
   input[type=email], input[type=text] {
@@ -91,8 +91,7 @@
   tr.busy { opacity: .6; }
   td.flat { white-space: nowrap; text-align: center; }
   td.flat select { font: inherit; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); min-height: 36px; padding: 0 var(--space-1); }
-  td.flat .mgr { display: block; font-size: 12px; line-height: 18px; color: var(--fg-muted); }
-  td.flat select:disabled, td.flat .mgr input:disabled { opacity: .4; }
+  td.flat select:disabled { opacity: .4; }
 
   footer { margin-top: var(--space-12); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; font-size: 14px; line-height: 20px; color: var(--fg-muted); }
   footer a { color: var(--fg-muted); }
@@ -120,8 +119,8 @@
     </form>
     <p class="hint">A felvett cím a Google-fiókjával léphet be, és csak a bepipált oldalakat nyithatja meg. A Bevásárlólista a közös lista olvasását és írását, a Gyakorló a szülői jogot (gyerekprofilok, eredmények, tabletek) is jelenti.</p>
 
-    <h2>Engedélyezett címek <span class="soon" id="count"></span></h2>
-    <p class="hint">A pipák és a megjegyzés azonnal mentődnek. A *-gal jelölt oldal még készül.</p>
+    <h2>Engedélyezett címek <span class="count" id="count"></span></h2>
+    <p class="hint">A pipák, a lakás és a megjegyzés azonnal mentődnek. A társasházat csak az admin szerkesztheti; a lakók mindent látnak, és a saját utalásukat jelölhetik.</p>
     <div class="tbl"><table>
       <thead><tr id="head"></tr></thead>
       <tbody id="list"></tbody>
