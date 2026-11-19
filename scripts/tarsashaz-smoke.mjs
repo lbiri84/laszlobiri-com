@@ -325,6 +325,12 @@ try {
     'áttekintés: a nyitott időszak kiemelt panelen, „most még nem kell utalni” felirattal');
   await shot(p, 'tarsashaz-attekintes');
   await p.goto(periodUrl); await p.waitForSelector('[data-act=preclose]');
+  // Felosztás felosztási mód szerint csoportosítva, az alappal
+  const groups = await p.$$eval('.split-t tr.grp', trs => trs.map(t => t.textContent.replace(/\s+/g, ' ').trim()));
+  check(groups.length === 4 && /^Vízfogyasztás szerint/.test(groups[0]) && /^Lakók száma szerint · 1 : 4 : 4 : 4 fő/.test(groups[1])
+    && /^Tulajdoni hányad szerint · 1\s911 \/ 1\s911 \/ 3\s089 \/ 3\s089 tízezred/.test(groups[2]) && /^Egyenlő részben/.test(groups[3]),
+    'felosztás: csoportonként (víz, létszám, hányad, egyenlő), az alappal');
+  check(/3 : 10 : 9 : 10 m³/.test(await p.textContent('.split-t')), 'felosztás: a víz tételnél a fogyasztás (3 : 10 : 9 : 10 m³)');
   await shot(p, 'tarsashaz-idoszak');
   // Lezárás
   await p.click('[data-act=preclose]');
