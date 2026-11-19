@@ -291,6 +291,14 @@ try {
   p.once('dialog', d => d.accept());
   await p.click('[data-act=delitem]'); await msgIs(p, /Törölve/);
 
+  // Áttekintés: a nyitott időszak javasolt utalásai (a legkevesebb utalás), vízóra rész nélkül
+  const periodUrl = p.url();
+  await p.goto(SITE + '/#/'); await p.waitForSelector('.tr');
+  const plan = await p.$$eval('.tr', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  check(plan.length === 3 && plan.every(t => /→\s*fsz-1/.test(t)) && plan.some(t => /fsz-2\s*→\s*fsz-1\s*27\s192/.test(t)), 'áttekintés: javasolt utalások (3, mind fsz-1 felé)');
+  check(!/Vízóra/.test(await p.$$eval('#app h2', hs => hs.map(h => h.textContent).join(' '))), 'áttekintés: nincs vízóra rész');
+  await shot(p, 'tarsashaz-attekintes');
+  await p.goto(periodUrl); await p.waitForSelector('[data-act=preclose]');
   await shot(p, 'tarsashaz-idoszak');
   // Lezárás
   await p.click('[data-act=preclose]');
