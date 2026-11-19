@@ -13,7 +13,7 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 \ir 000_helpers.sql
 
-select plan(42);
+select plan(40);
 
 insert into public.households (id, name) values ('aaaaaaaa-0000-0000-0000-000000000000', 'A háztartás');
 insert into private.allowed_emails (email, household_id, app_role, apps, flat) values
@@ -102,13 +102,12 @@ select is(pg_temp.err_as(:L1, $$select public.th_delete_period((select pid from 
 select is(pg_temp.err_as(:K, $$select public.th_delete_period((select pid from ids))$$), 'ok', 'időszak törlése: kezelő törli');
 select is((select count(*)::int from public.th_periods) + (select count(*)::int from public.th_items) + (select count(*)::int from public.th_item_shares), 0,
   'időszak törlése: a tételek és a részek is törlődnek');
-select is(pg_temp.err_as(:K, $$select public.th_save_reading('{"read_on":"2026-10-12","fsz1":1,"fsz2":2,"em3":3,"em4":4}')$$), 'ok', 'kiürítés előtt: egy leolvasás');
-select is(pg_temp.err_as(:K, $$select public.th_reset('torles')$$), '22023', 'kiürítés: megerősítés nélkül elutasítva');
-select is(pg_temp.err_as(:L1, $$select public.th_reset('TÖRLÉS')$$), '42501', 'kiürítés: lakó nem üríthet');
-select is(pg_temp.err_as(:K, $$select public.th_reset('TÖRLÉS')$$), 'ok', 'kiürítés: kezelő kiüríti');
-select is((select count(*) from public.th_readings)::text || ':' || (select count(*) from public.th_flats), '0:4', 'kiürítés: a leolvasások törlődnek, a hányad marad');
-select is(pg_temp.err_as(:K, $$select public.th_reset('TÖRLÉS', true)$$), 'ok', 'kiürítés a beállításokkal');
-select is((select count(*) from public.th_flats)::text || ':' || (select count(*) from public.th_residents), '0:0', 'kiürítés a beállításokkal: a hányad és a létszám is törlődik');
+-- létszám-bejegyzés törlése (a 2025-07-01-i beállítás a teszt elején készült)
+select is(pg_temp.err_as(:K, $$select public.th_save_residents('2026-11-18', '{"fsz-1":1,"fsz-2":4,"em-3":4,"em-4":4}')$$), 'ok', 'létszám: egy újabb bejegyzés');
+select is(pg_temp.err_as(:L1, $$select public.th_delete_residents('2026-11-18')$$), '42501', 'létszám törlése: lakó nem törölhet');
+select is(pg_temp.err_as(:K, $$select public.th_delete_residents('2026-11-18')$$), 'ok', 'létszám törlése: kezelő törli');
+select is((select string_agg(distinct valid_from::text, ',') from public.th_residents), '2025-07-01', 'létszám törlése: csak az a nap törlődött');
+select is((select count(*)::int from pg_proc where proname in ('th_import', 'th_reset')), 0, 'a betöltés és a kiürítés nincs többé');
 
 select * from finish();
 rollback;
