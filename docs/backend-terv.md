@@ -1,12 +1,12 @@
 # Backend: a laszlobiri oldalak közös háttere
 
-Állapot (2026-11-14): **élesben.** A főoldal, az `ebed.`, a `bevasarlas.` és a `gyakorlas.` csak belépve használható; a bevásárlólista a háztartás közös listája, a gyakorló gyerekprofilokkal, közös eredményekkel és gyerek móddal működik. Hátravan: mentés és export (lásd „Hátralévő munka”).
+Állapot (2026-11-19): **élesben.** A főoldal, az `ebed.`, a `bevasarlas.`, a `gyakorlas.` és a `tarsashaz.` csak belépve használható; a bevásárlólista a háztartás közös listája, a gyakorló gyerekprofilokkal, közös eredményekkel és gyerek móddal működik. Hátravan: mentés és export (lásd „Hátralévő munka”).
 
 A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`supabase/README.md`](../supabase/README.md)-ben vannak.
 
 ## Áttekintés
 
-- **Frontend**: statikus oldalak GitHub Pages-en, négy repóban. Build nincs; a közös kód a `laszlobiri.com/lib/v1/` címről töltődik.
+- **Frontend**: statikus oldalak GitHub Pages-en, öt repóban. Build nincs; a közös kód a `laszlobiri.com/lib/v1/` címről töltődik.
 - **Backend**: egy közös Supabase-projekt (`eokwxkrcttsoxfflvuus`, EU, Frankfurt): Google OAuth, Postgres, Row Level Security (RLS), Realtime, `pg_cron`.
 - **Védelem**: minden adatot az adatbázis RLS-e véd. Az oldalak kapuja böngészőben működik: a fájlok és a repók nyilvánosak, adat nélkül viszont üresek.
 
@@ -16,6 +16,7 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 | `interfood-menu` | `ebed.laszlobiri.com` | Actions (`update-menu.yml`) | csak a kapu |
 | `bevasarlo-lista` | `bevasarlas.laszlobiri.com` | Pages, ágból | közös lista, offline kimenő sor, Realtime |
 | `gyakorlas` | `gyakorlas.laszlobiri.com` | Pages, ágból | gyerekprofilok, eredmények, gyerek mód, hibás feladat jelentése |
+| `tarsashaz` | `tarsashaz.laszlobiri.com` | Pages, a `main` ágból | társasházi közös költség: időszakok, tételek, felosztás, utalások, vízóra, kimutatás |
 
 ### Fix feltételek
 
@@ -44,7 +45,7 @@ A kézi beállítások (Supabase, Google, migrációk, új felhasználó) a [`su
 
 ### Oldalankénti hozzáférés és admin felület
 
-- Minden engedélyezett címhez tartozik, mely aloldalakat nyithatja meg (`allowed_emails.apps`: `ebed`, `bevasarlas`, `gyakorlas`, `elszamolas`). A család címei a bevezetéskor az első hármat kapták.
+- Minden engedélyezett címhez tartozik, mely aloldalakat nyithatja meg (`allowed_emails.apps`: `ebed`, `bevasarlas`, `gyakorlas`, `tarsashaz`). A család címei a bevezetéskor az első hármat kapták.
 - A kapu (`gate.js`) aloldalon a `my_access()` alapján dönt; a választ az oldal localStorage-a (`lb-access`) megjegyzi, így offline és gyorsan is működik, online mindig frissül. Ha nincs hozzáférés: „Ehhez az oldalhoz nincs hozzáférésed.”, a `ready` nem teljesül. Hálózati hibánál a legutóbbi ismert döntés számít, ha nincs ilyen, megnyílik. A főoldal csak a megnyitható alkalmazásokat mutatja.
 - Az oldal-pipa az adatot is védi (2026-11-17 óta): a bevásárlólista adataihoz (`lists`, `items`, `item_history`, `bump_history`) a `bevasarlas`, a gyakorló szülői adataihoz (minden, ami a `private.is_parent()`-en megy át: gyerekprofilok, eredmények, jelvények, tabletek, párosítás, jelentések, fejezetek) a `gyakorlas` is kell a háztartás-tagság mellett (`private.has_app()`, `private.can_list()`). A háztartás-tagság magától állítódik: aki a két családi oldal egyikét megkapja, tag; akinek mindkettő lekerül, kikerül. Külön „Család” pipa nincs. A gyerek tablet nem változik. Lakótárs (csak Elszámolás) a családi adatokból semmit nem lát, akkor sem, ha a kaput megkerüli; ezt a `008` és `009` teszt bizonyítja.
 - `/admin/` (csak `app_role = 'admin'`): a címek listája (van-e fiók, utolsó belépés), felvétel, oldalak, megjegyzés (legfeljebb 80 karakter), visszavonás. Az admin függvények maguk is ellenőrzik a jogot; az admin magát nem vonhatja vissza, és nála a Lista vagy a Gyakorló megmarad. Visszavonáskor a cím és a háztartás-tagság megszűnik, a fiók megmarad, de semmihez nem fér hozzá (törlés: dashboard).
@@ -113,6 +114,14 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 - Színtéma: a gyerek maga választja a kezdőképernyőn („Színem”): palakék, rózsaszín (sötét) vagy égkék (világos). A választott téma a gyerek saját nézeteiben él, a „Ki gyakorol?” és a szülői nézet palakék.
 - Hibás feladat: a kérdésnél „⚑” → okkód; a szülői nézetben „Javítva” / „Elvetés” és „Szövegként másolás” a javításhoz (a gyerek neve nélkül).
 
+### Társasház
+
+- Négy lakás (fsz-1, fsz-2, em-3, em-4), nevek nélkül: a társasház oldalt megnyitó címhez egy lakás tartozik (`allowed_emails.flat`, az admin oldalon állítható).
+- Táblák: `th_flats` (tulajdoni hányad), `th_residents` (létszám, dátumtól), `th_periods`, `th_items` és `th_item_shares` (a tétel lakásonkénti része, mentéskor rögzítve), `th_readings` (vízóra), `th_transfers`.
+- Olvasni a társasház oldal jogával lehet (`private.th_can_read()`); írni csak az **admin**, ha a társasház oldalt is megnyithatja (`private.th_is_manager()`), a `th_*` függvényeken át; a táblákra közvetlen írási jog nincs. Az utalást az utaló vagy a fogadó lakás lakója is jelölheti (`th_mark_transfer`).
+- A felosztást és a legkevesebb utalást a kliens számolja; a szerver ellenőrzi, hogy a lakásrészek összege a tétel összege, csak beszálló lakásnak van része, és lezáráskor az utalások kiadják az egyenlegeket (egyedi utalásnál lakásonként legfeljebb 10 Ft kerekítési eltéréssel).
+- A működés leírása a felhasználóknak az oldalon: „Hogyan számol?” (a fejléc „?” gombja).
+
 ## Döntések
 
 | kérdés | döntés |
@@ -120,6 +129,7 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 | munkamenet az aloldalak között | közös süti (`.laszlobiri.com`) |
 | használat belépés nélkül | nincs; böngészős kapu minden oldalon, a `/belepes/` és az `/adatvedelem/` kivételével. Szerveroldali védelem (más tárhely) elvetve. |
 | felhasználók | két szülő, egy `parent` szerep; további szerep egy migrációval vehető fel |
+| társasház szerkesztése | csak az admin; külön kezelői jog nincs (2026-11-19) |
 | több oldal, más felhasználók (pl. lakótársak) | közös belépés, oldalankénti hozzáférés (`apps`), az oldal-pipa az adatot is védi (szülő = háztartás-tag Gyakorló pipával); külön Család pipa nincs; kezelés a `/admin/` oldalon (2026-11-17) |
 | gyerekprofilok | kettő; a becenevek csak az adatbázisban, a repókban nem |
 | gyerekek saját eszköze | gyerek mód: névtelen, párosított eszközfiók, PIN-nel lehet kilépni |
@@ -144,8 +154,8 @@ Az útvonal és az exportált nevek publikus szerződés; törő változás csak
 
 | parancs | mit ellenőriz |
 | --- | --- |
-| `npm run test:db` | pgTAP: allowlist és profil (001), közös lista (002), gyakorló és gyerek mód (003), színtéma (004), jelentések (005), falbontó-eredmény (006), elérhető fejezetek (007), oldalankénti hozzáférés és admin (008), az oldal-pipa az adatot is védi (009). Helyi Postgresen, Supabase-stubbal. |
-| `npm run test:smoke` | böngészős próbák ál-Supabase-zel: belépés, kapu, oldalankénti hozzáférés és admin oldal (`login-smoke`), kéttelefonos listaszinkron (`list-sync-smoke`), gyakorló szülővel és tablettel (`practice-smoke`). A bevasarlo-lista és a gyakorlas repó a laszlobiri-com mellett legyen. |
+| `npm run test:db` | pgTAP: allowlist és profil (001), közös lista (002), gyakorló és gyerek mód (003), színtéma (004), jelentések (005), falbontó-eredmény (006), elérhető fejezetek (007), oldalankénti hozzáférés és admin (008), az oldal-pipa az adatot is védi (009), társasház (010), a korlátok átfogóan: minden `th_*` és `admin_*` függvény, táblajogok, anon (011). Helyi Postgresen, Supabase-stubbal. |
+| `npm run test:smoke` | böngészős próbák ál-Supabase-zel: belépés, kapu, oldalankénti hozzáférés és admin oldal (`login-smoke`), kéttelefonos listaszinkron (`list-sync-smoke`), gyakorló szülővel és tablettel (`practice-smoke`), társasház kezelővel és lakóval (`tarsashaz-smoke`; `MOBILE=1`: telefon-emuláció). A bevasarlo-lista és a gyakorlas repó a laszlobiri-com mellett legyen. |
 | `npm run check:rls` | az éles projekt a nyilvános kulccsal: bejelentkezés nélkül semmi nem olvasható és írható. Proxy mögött `NODE_USE_ENV_PROXY=1`. |
 
 ## Hátralévő munka

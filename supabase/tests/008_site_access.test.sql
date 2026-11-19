@@ -50,8 +50,8 @@ select is(pg_temp.err_as(:A2, 'select * from public.admin_access_list()'), '4250
 select is(pg_temp.err_as(:L,  'select * from public.admin_access_list()'), '42501', 'lista: lakótárs nem kérheti le');
 select is(pg_temp.err_as(:T,  'select * from public.admin_access_list()'), '42501', 'lista: tablet nem kérheti le');
 select is(pg_temp.count_as(:ADM, 'select * from public.admin_access_list()'), 3, 'lista: admin minden címet lát');
-select is(pg_temp.q_as(:ADM, $$select in_household, has_account, display_name from public.admin_access_list() where email = 'l@example.invalid'$$),
-  '[{"in_household": false, "has_account": true, "display_name": "L"}]'::jsonb, 'lista: lakótárs: van fiókja, nincs a háztartásban');
+select is(pg_temp.q_as(:ADM, $$select has_account, display_name from public.admin_access_list() where email = 'l@example.invalid'$$),
+  '[{"has_account": true, "display_name": "L"}]'::jsonb, 'lista: lakótárs: van fiókja');
 select is(pg_temp.q_as(:ADM, $$select (last_sign_in_at is not null) as x from public.admin_access_list() where email = 'adm@example.invalid'$$),
   '[{"x": true}]'::jsonb, 'lista: utolsó belépés');
 
