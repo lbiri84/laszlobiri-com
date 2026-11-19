@@ -97,9 +97,10 @@ function rpc(fn, p, who) {
       const bal = balances(p.p_id);
       for (const f of FLATS) {
         const net = p.p_transfers.filter(t => t.to === f).reduce((a, t) => a + t.amount, 0) - p.p_transfers.filter(t => t.from === f).reduce((a, t) => a + t.amount, 0);
-        if (net !== bal[f]) return err(400, '22023', `Az utalások nem adják ki a(z) ${f} egyenlegét.`);
+        if (Math.abs(net - bal[f]) > Math.min(Math.max(p.p_tolerance || 0, 0), 10)) return err(400, '22023', `Az utalások nem adják ki a(z) ${f} egyenlegét.`);
       }
-      for (const t of p.p_transfers) T.th_transfers.push({ id: uuid(), period_id: p.p_id, from_flat: t.from, to_flat: t.to, amount: t.amount, paid_at: null });
+      if (p.p_transfers.some(t => t.from === t.to || !(t.amount > 0))) return err(400, '22023', 'Hibás utalás.');
+      for (const t of p.p_transfers) T.th_transfers.push({ id: uuid(), period_id: p.p_id, from_flat: t.from, to_flat: t.to, amount: t.amount, paid_at: p.p_paid ? new Date().toISOString() : null });
       Object.assign(T.th_periods.find(x => x.id === p.p_id), { status: 'closed', closed_at: new Date().toISOString() });
       return { status: 200, body: null };
     }
@@ -340,6 +341,22 @@ try {
   p.on('dialog', d => d.accept());
   await p.click('[data-act=reopen]'); await msgIs(p, /Újranyitva/);
   check(T.th_periods[0].status === 'open' && T.th_transfers.length === 0, 'újranyitás: megerősítés után nyitott, az utalások törlődtek');
+
+  // Lezárás egyedi utalásokkal: 1 Ft kerekítési eltérés belefér, a túl nagy nem; azonnal kiegyenlítve
+  await p.click('[data-act=preclose]'); await p.click('[data-act=custom]');
+  await p.waitForSelector('[data-tr-k=amount]');
+  const amt0 = '[data-tr-i="0"][data-tr-k="amount"]';
+  await typeIn(p, amt0, '27300');
+  check(await p.$eval('[data-act=close]', b => b.disabled) && /Túl nagy eltérés/.test(await p.textContent('#app')), 'egyedi utalás: túl nagy eltérésnél a Lezárás tiltva');
+  await typeIn(p, amt0, '27193');
+  check(!(await p.$eval('[data-act=close]', b => b.disabled)) && /Kerekítési eltérés/.test(await p.textContent('#app')), 'egyedi utalás: 1 Ft eltérés belefér');
+  await p.click('[data-act=closepaid]');
+  await p.click('[data-act=close]'); await msgIs(p, /kiegyenlítve/);
+  check(T.th_periods[0].status === 'closed' && T.th_transfers.length === 3 && T.th_transfers.every(t => t.paid_at) && T.th_transfers.some(t => t.amount === 27193),
+    'egyedi utalás: lezárva a megadott utalásokkal, mind kiegyenlítve');
+  check(/Kerekítési eltérés az utalásokban/.test(await p.textContent('#app')), 'egyedi utalás: a lezárt időszakon látszik az eltérés');
+  await shot(p, 'tarsashaz-egyedi-lezaras');
+  await p.click('[data-act=reopen]'); await msgIs(p, /Újranyitva/);
   await p.click('[data-act=delperiod]'); await msgIs(p, /Időszak törölve/);
   check(T.th_periods.length === 0 && T.th_items.length === 0 && T.th_item_shares.length === 0, 'időszak törlése: a tételekkel és a részekkel együtt');
   // Létszám: egy véletlen mai bejegyzés, majd törlése az előzmények közül
