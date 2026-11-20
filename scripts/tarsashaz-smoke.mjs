@@ -325,14 +325,19 @@ try {
     'áttekintés: a nyitott időszak kiemelt panelen, „most még nem kell utalni” felirattal');
   await shot(p, 'tarsashaz-attekintes');
   await p.goto(periodUrl); await p.waitForSelector('[data-act=preclose]');
-  // A felosztás táblázatában felosztási módonként vékony fejléc
-  const heads = await p.$$eval('.split-t tr.grp', hs => hs.map(h => h.textContent.trim()));
-  check(JSON.stringify(heads) === JSON.stringify(['Felosztás vízhasználat alapján', 'Felosztás létszám alapján', 'Felosztás tulajdoni hányad alapján', 'Egyenlő felosztás']) && !(await p.$('.grp-h, .split-t tr.sub')),
-    'felosztás: a táblázatban módonként vékony fejléc, összegzés nélkül; a tételek listája az eredeti');
-  const sums = await p.$$eval('.split-t tr:not(.grp):not(.tot)', rs => rs.slice(1).map(r => {
-    const c = [...r.cells].map(td => Number(td.textContent.replace(/\D/g, '') || 0)); return c[1] === c.slice(2).reduce((a, b) => a + b, 0); }));
-  const tt = await p.$$eval('.split-t tr.tot td', c => c.map(td => Number(td.textContent.replace(/\D/g, '') || 0)));
-  check(sums.length > 0 && sums.every(Boolean) && tt[1] === tt.slice(2).reduce((a, b) => a + b, 0), 'felosztás: az Összesen oszlop tételenként és összesen egyezik a lakások részével');
+  // A felosztás táblázata az eredeti; egy számra koppintva felugrik, hogyan jött ki
+  check(!(await p.$('.split-t, tr.grp')), 'felosztás: az eredeti táblázat, fejlécek nélkül');
+  const vizCell = await p.$('.scroll table tr:nth-child(2) td:nth-child(3) .cell');
+  await vizCell.click();
+  const popText = await p.textContent('#pop');
+  check(await p.isVisible('#pop') && /Vízfogyasztás szerint/.test(popText) && /fsz-2: 10 m³, összesen: 32 m³/.test(popText) && /× 10 \/ 32 = 15\s194\sFt/.test(popText),
+    'felosztás: koppintásra felugrik a víz részének számítása (' + popText.replace(/\n/g, ' | ') + ')');
+  if (process.env.SHOTS) await p.screenshot({ path: path.join(process.env.SHOTS, 'tarsashaz-felugro.png') });
+  await p.click('h2');
+  check(!(await p.isVisible('#pop')), 'felosztás: máshova koppintva a felugró eltűnik');
+  await p.click('.scroll table tr.tot td:nth-child(2) .cell');
+  check(/fsz-1 része összesen[\s\S]*= 9\s356\sFt/.test(await p.textContent('#pop')), 'felosztás: az összesen sor felugrója tételenként');
+  await p.click('h2');
   await shot(p, 'tarsashaz-idoszak');
   // Lezárás
   await p.click('[data-act=preclose]');
