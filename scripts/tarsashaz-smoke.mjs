@@ -327,8 +327,12 @@ try {
   await p.goto(periodUrl); await p.waitForSelector('[data-act=preclose]');
   // A felosztás táblázatában felosztási módonként vékony fejléc
   const heads = await p.$$eval('.split-t tr.grp', hs => hs.map(h => h.textContent.trim()));
-  check(JSON.stringify(heads) === JSON.stringify(['Vízfogyasztás szerint', 'Lakók száma szerint', 'Tulajdoni hányad szerint', 'Egyenlő részben']) && !(await p.$('.grp-h, .split-t tr.sub')),
+  check(JSON.stringify(heads) === JSON.stringify(['Felosztás vízhasználat alapján', 'Felosztás létszám alapján', 'Felosztás tulajdoni hányad alapján', 'Egyenlő felosztás']) && !(await p.$('.grp-h, .split-t tr.sub')),
     'felosztás: a táblázatban módonként vékony fejléc, összegzés nélkül; a tételek listája az eredeti');
+  const sums = await p.$$eval('.split-t tr:not(.grp):not(.tot)', rs => rs.slice(1).map(r => {
+    const c = [...r.cells].map(td => Number(td.textContent.replace(/\D/g, '') || 0)); return c[1] === c.slice(2).reduce((a, b) => a + b, 0); }));
+  const tt = await p.$$eval('.split-t tr.tot td', c => c.map(td => Number(td.textContent.replace(/\D/g, '') || 0)));
+  check(sums.length > 0 && sums.every(Boolean) && tt[1] === tt.slice(2).reduce((a, b) => a + b, 0), 'felosztás: az Összesen oszlop tételenként és összesen egyezik a lakások részével');
   await shot(p, 'tarsashaz-idoszak');
   // Lezárás
   await p.click('[data-act=preclose]');
